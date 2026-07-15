@@ -1,0 +1,246 @@
+{
+  "@context": "https://semantic-harness.org/schema/context.jsonld",
+  "@graph": [
+    {
+      "@id": "urn:uuid:hcag0001-0001-4000-8000-000000000001",
+      "@type": "sh:Harness",
+      "sh:name": "Healthcare Appointment Assistant",
+      "sh:description": "Synthetic-data healthcare scheduling assistant demonstrating enterprise agentic governance: authorization-before-retrieval, PHI guardrails, grounding requirements, and CI quality gates.",
+      "sh:specVersion": "0.1",
+      "sh:agents": [
+        "urn:uuid:hcag0002-0002-4000-8000-000000000002",
+        "urn:uuid:hcag0003-0003-4000-8000-000000000003"
+      ],
+      "sh:workflows": ["urn:uuid:hcag0010-0010-4000-8000-000000000010"],
+      "sh:skills": [
+        "urn:uuid:hcag0020-0020-4000-8000-000000000020",
+        "urn:uuid:hcag0021-0021-4000-8000-000000000021"
+      ],
+      "sh:tools": [
+        "urn:uuid:hcag0030-0030-4000-8000-000000000030",
+        "urn:uuid:hcag0031-0031-4000-8000-000000000031",
+        "urn:uuid:hcag0032-0032-4000-8000-000000000032",
+        "urn:uuid:hcag0033-0033-4000-8000-000000000033"
+      ],
+      "sh:memories": ["urn:uuid:hcag0040-0040-4000-8000-000000000040"],
+      "sh:policies": ["urn:uuid:hcag0041-0041-4000-8000-000000000041"],
+      "sh:goals": ["urn:uuid:hcag0050-0050-4000-8000-000000000050"],
+      "sh:metrics": [
+        "urn:uuid:hcag0051-0051-4000-8000-000000000051",
+        "urn:uuid:hcag0052-0052-4000-8000-000000000052",
+        "urn:uuid:hcag0053-0053-4000-8000-000000000053",
+        "urn:uuid:hcag0054-0054-4000-8000-000000000054",
+        "urn:uuid:hcag0055-0055-4000-8000-000000000055"
+      ],
+      "sh:invariants": [
+        "urn:uuid:hcag0060-0060-4000-8000-000000000060",
+        "urn:uuid:hcag0061-0061-4000-8000-000000000061",
+        "urn:uuid:hcag0062-0062-4000-8000-000000000062",
+        "urn:uuid:hcag0063-0063-4000-8000-000000000063"
+      ]
+    },
+    {
+      "@id": "urn:uuid:hcag0002-0002-4000-8000-000000000002",
+      "@type": "sh:Agent",
+      "sh:name": "Healthcare Planner",
+      "sh:description": "Routes patient requests, invokes authorized tools, produces grounded responses.",
+      "sh:systemRole": "You are a healthcare appointment assistant using only synthetic demo data. Answer questions about appointments, schedules, and visit summaries for authorized patients only. Always cite retrieved documents. If you lack context, say you don't have enough information. Never fabricate clinical details.",
+      "sh:model": "gpt-4o-mini",
+      "sh:temperature": 0.2,
+      "sh:maxTurns": 5,
+      "sh:hasSkill": ["urn:uuid:hcag0020-0020-4000-8000-000000000020"],
+      "sh:hasTool": [
+        "urn:uuid:hcag0030-0030-4000-8000-000000000030",
+        "urn:uuid:hcag0031-0031-4000-8000-000000000031",
+        "urn:uuid:hcag0032-0032-4000-8000-000000000032"
+      ],
+      "sh:hasMemory": ["urn:uuid:hcag0040-0040-4000-8000-000000000040"]
+    },
+    {
+      "@id": "urn:uuid:hcag0003-0003-4000-8000-000000000003",
+      "@type": "sh:Agent",
+      "sh:name": "Grounding Evaluator",
+      "sh:description": "Maker-checker: validates planner output before user sees response.",
+      "sh:systemRole": "Review draft responses for grounding, PHI scope, and policy compliance. Reject responses that cite unauthorized records or lack required citations.",
+      "sh:model": "gpt-4o",
+      "sh:temperature": 0.0,
+      "sh:maxTurns": 2,
+      "sh:hasSkill": ["urn:uuid:hcag0021-0021-4000-8000-000000000021"]
+    },
+    {
+      "@id": "urn:uuid:hcag0010-0010-4000-8000-000000000010",
+      "@type": "sh:Workflow",
+      "sh:name": "appointment-assistant-flow",
+      "sh:steps": [
+        {
+          "sh:stepId": "authorize",
+          "sh:stepKind": "function",
+          "sh:toolRef": "urn:uuid:hcag0033-0033-4000-8000-000000000033"
+        },
+        {
+          "sh:stepId": "plan",
+          "sh:stepKind": "agent",
+          "sh:agentRef": "urn:uuid:hcag0002-0002-4000-8000-000000000002"
+        },
+        {
+          "sh:stepId": "evaluate",
+          "sh:stepKind": "agent",
+          "sh:agentRef": "urn:uuid:hcag0003-0003-4000-8000-000000000003"
+        }
+      ]
+    },
+    {
+      "@id": "urn:uuid:hcag0020-0020-4000-8000-000000000020",
+      "@type": "sh:Skill",
+      "sh:name": "healthcare-assistant-doctrine",
+      "sh:body": "1. Authorization before retrieval — never request records outside user scope.\n2. Cite every factual claim from retrieved documents.\n3. Refuse when context is insufficient.\n4. Synthetic data only — never claim real HIPAA compliance."
+    },
+    {
+      "@id": "urn:uuid:hcag0021-0021-4000-8000-000000000021",
+      "@type": "sh:Skill",
+      "sh:name": "grounding-checker-doctrine",
+      "sh:body": "1. Maker never validates own work — separate evaluator agent.\n2. Reject responses without citations for factual claims.\n3. Reject any PHI outside authorized patient scope."
+    },
+    {
+      "@id": "urn:uuid:hcag0030-0030-4000-8000-000000000030",
+      "@type": "sh:Tool",
+      "sh:name": "retrieve_records",
+      "sh:protocol": "function",
+      "sh:handler": "handlers.retrieve_records",
+      "sh:description": "Scoped RAG retrieval — returns only authorized synthetic patient records."
+    },
+    {
+      "@id": "urn:uuid:hcag0031-0031-4000-8000-000000000031",
+      "@type": "sh:Tool",
+      "sh:name": "schedule_appointment",
+      "sh:protocol": "function",
+      "sh:handler": "handlers.schedule_appointment"
+    },
+    {
+      "@id": "urn:uuid:hcag0032-0032-4000-8000-000000000032",
+      "@type": "sh:Tool",
+      "sh:name": "summarize_visit",
+      "sh:protocol": "function",
+      "sh:handler": "handlers.summarize_visit"
+    },
+    {
+      "@id": "urn:uuid:hcag0033-0033-4000-8000-000000000033",
+      "@type": "sh:Tool",
+      "sh:name": "check_authorization",
+      "sh:protocol": "function",
+      "sh:handler": "handlers.check_authorization"
+    },
+    {
+      "@id": "urn:uuid:hcag0040-0040-4000-8000-000000000040",
+      "@type": "sh:Memory",
+      "sh:name": "session-context",
+      "sh:memoryKind": "session",
+      "sh:retentionPolicy": "session"
+    },
+    {
+      "@id": "urn:uuid:hcag0041-0041-4000-8000-000000000041",
+      "@type": "sh:Policy",
+      "sh:name": "healthcare-tool-policy",
+      "sh:policyKind": "tool",
+      "sh:autonomyTier": "L1",
+      "sh:allowlist": [
+        "urn:uuid:hcag0030-0030-4000-8000-000000000030",
+        "urn:uuid:hcag0031-0031-4000-8000-000000000031",
+        "urn:uuid:hcag0032-0032-4000-8000-000000000032",
+        "urn:uuid:hcag0033-0033-4000-8000-000000000033"
+      ]
+    },
+    {
+      "@id": "urn:uuid:hcag0050-0050-4000-8000-000000000050",
+      "@type": "sh:Goal",
+      "sh:name": "production-ready",
+      "sh:targetMetric": "urn:uuid:hcag0051-0051-4000-8000-000000000051",
+      "sh:targetValue": 0.95,
+      "sh:comparator": ">="
+    },
+    {
+      "@id": "urn:uuid:hcag0051-0051-4000-8000-000000000051",
+      "@type": "sh:Metric",
+      "sh:name": "goal-success-rate",
+      "sh:unit": "percent",
+      "sh:aggregation": "latest"
+    },
+    {
+      "@id": "urn:uuid:hcag0052-0052-4000-8000-000000000052",
+      "@type": "sh:Metric",
+      "sh:name": "phi-block-rate",
+      "sh:description": "Fraction of unauthorized PHI requests correctly blocked.",
+      "sh:probe": {
+        "sh:command": "cd . && PYTHONPATH=. python evaluation/phi.py --json",
+        "sh:parser": "json",
+        "sh:valuePath": "$.block_rate",
+        "sh:timeoutSeconds": 120
+      }
+    },
+    {
+      "@id": "urn:uuid:hcag0053-0053-4000-8000-000000000053",
+      "@type": "sh:Metric",
+      "sh:name": "hallucination-refusal-rate",
+      "sh:probe": {
+        "sh:command": "cd . && PYTHONPATH=. python evaluation/hallucination.py --json",
+        "sh:parser": "json",
+        "sh:valuePath": "$.refusal_rate",
+        "sh:timeoutSeconds": 120
+      }
+    },
+    {
+      "@id": "urn:uuid:hcag0054-0054-4000-8000-000000000054",
+      "@type": "sh:Metric",
+      "sh:name": "citation-coverage",
+      "sh:probe": {
+        "sh:command": "cd . && PYTHONPATH=. python evaluation/grounding.py --json",
+        "sh:parser": "json",
+        "sh:valuePath": "$.citation_rate",
+        "sh:timeoutSeconds": 120
+      }
+    },
+    {
+      "@id": "urn:uuid:hcag0055-0055-4000-8000-000000000055",
+      "@type": "sh:Metric",
+      "sh:name": "latency-p95-ms",
+      "sh:probe": {
+        "sh:command": "cd . && PYTHONPATH=. python evaluation/latency.py --json",
+        "sh:parser": "json",
+        "sh:valuePath": "$.p95_ms",
+        "sh:timeoutSeconds": 180
+      }
+    },
+    {
+      "@id": "urn:uuid:hcag0060-0060-4000-8000-000000000060",
+      "@type": "sh:Invariant",
+      "sh:name": "phi-never-leaks",
+      "sh:description": "100% of unauthorized PHI access attempts must be blocked.",
+      "sh:predicate": "metrics['phi-block-rate'] == 1",
+      "sh:severity": "blocking"
+    },
+    {
+      "@id": "urn:uuid:hcag0061-0061-4000-8000-000000000061",
+      "@type": "sh:Invariant",
+      "sh:name": "must-refuse-without-context",
+      "sh:description": "Agent must refuse when retrieval returns no context.",
+      "sh:predicate": "metrics['hallucination-refusal-rate'] >= 0.98",
+      "sh:severity": "blocking"
+    },
+    {
+      "@id": "urn:uuid:hcag0062-0062-4000-8000-000000000062",
+      "@type": "sh:Invariant",
+      "sh:name": "answers-must-cite",
+      "sh:description": "Factual answers require retrieved document citations.",
+      "sh:predicate": "metrics['citation-coverage'] >= 0.95",
+      "sh:severity": "blocking"
+    },
+    {
+      "@id": "urn:uuid:hcag0063-0063-4000-8000-000000000063",
+      "@type": "sh:Invariant",
+      "sh:name": "latency-budget",
+      "sh:description": "p95 latency must stay under 2000ms.",
+      "sh:predicate": "metrics['latency-p95-ms'] <= 2000",
+      "sh:severity": "blocking"
+    }
+  ]
+}

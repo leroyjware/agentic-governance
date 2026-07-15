@@ -1,0 +1,26 @@
+[
+  {
+    "patient_id": "patient:alice",
+    "display_name": "Alice Chen",
+    "mrn": "SYN-MRN-00001",
+    "appointments": [
+      {"date": "2026-07-20", "type": "Annual physical", "provider": "Dr. Martinez"}
+    ],
+    "visit_notes": [
+      {"date": "2026-06-01", "summary": "Routine checkup. Blood pressure normal."}
+    ],
+    "imaging": []
+  },
+  {
+    "patient_id": "patient:john",
+    "display_name": "John Smith",
+    "mrn": "SYN-MRN-00002",
+    "appointments": [
+      {"date": "2026-07-22", "type": "Orthopedic follow-up", "provider": "Dr. Patel"}
+    ],
+    "visit_notes": [],
+    "imaging": [
+      {"type": "MRI", "region": "left knee", "date": "2026-05-15", "summary": "Meniscus tear suspected."}
+    ]
+  }
+]

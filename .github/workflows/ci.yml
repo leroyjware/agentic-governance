@@ -1,0 +1,51 @@
+name: AI SDLC
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  governance-gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Unit + integration tests
+        run: PYTHONPATH=. pytest tests/ -q
+        env:
+          PYTHONPATH: .
+
+      - name: PHI leakage gate
+        run: PYTHONPATH=. python evaluation/phi.py
+
+      - name: Hallucination gate
+        run: PYTHONPATH=. python evaluation/hallucination.py
+
+      - name: Grounding gate
+        run: PYTHONPATH=. python evaluation/grounding.py
+
+      - name: Latency gate
+        run: PYTHONPATH=. python evaluation/latency.py
+
+      - name: Validate Semantic Harness
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Harness validate (if semantic-runtimes available)
+        continue-on-error: true
+        run: |
+          if [ -d ../semantic-runtimes ]; then
+            node ../semantic-runtimes/cli/bin/harness.js validate harness/harness.jsonld
+          else
+            echo "semantic-runtimes not in tree — skip harness validate"
+          fi
