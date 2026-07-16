@@ -8,11 +8,15 @@
 
 > *Most teams can build a LangGraph agent. Few can prove it's production-ready.*
 
+**LangGraph is an implementation detail.** Governance is the product.
+
+<p align="center">
+  <img src="docs/assets/governance-is-the-product.png" alt="Governance is the Product — agentic-governance architecture" width="900" />
+</p>
+
 **Whitepaper:** [docs/WHITEPAPER.md](docs/WHITEPAPER.md) · **Local:** [docs/LOCAL.md](docs/LOCAL.md) · **Evidence:** [docs/EVIDENCE.md](docs/EVIDENCE.md) · **Controls map:** [docs/CONTROLS-MAP.md](docs/CONTROLS-MAP.md) · **Interview:** [docs/INTERVIEW-GUIDE.md](docs/INTERVIEW-GUIDE.md) · **Plan:** [PLAN.md](PLAN.md)
 
 This is **not** a chatbot demo. It is an open-source reference showing how to **operationalize** agentic AI with governance, evaluation, and CI discipline.
-
-**LangGraph is an implementation detail.** Governance is the product.
 
 ---
 
