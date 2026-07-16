@@ -1,19 +1,20 @@
-"""LangGraph module smoke tests (no API key required)."""
+"""LangGraph / workflow smoke tests (no API key required)."""
 
-from agent.graph import graph_available, load_system_prompt
-from agent.tools import ALL_TOOLS
-
-
-def test_system_prompt_loads():
-    prompt = load_system_prompt()
-    assert "synthetic" in prompt.lower()
-    assert "tools" in prompt.lower()
-
-
-def test_tools_registered():
-    names = {t.name for t in ALL_TOOLS}
-    assert names == {"retrieve_records", "schedule_appointment", "summarize_visit"}
+from agent.graph import graph_available
+from agent.harness_loader import load_harness
+from agent.workflow import NODE_REGISTRY, build_workflow
 
 
 def test_graph_deps_importable():
     assert graph_available() is True
+
+
+def test_workflow_compiles():
+    g = build_workflow()
+    assert g is not None
+
+
+def test_registry_covers_harness_steps():
+    h = load_harness()
+    for step in h.workflow().get("steps") or []:
+        assert step["sh:stepId"] in NODE_REGISTRY

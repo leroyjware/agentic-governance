@@ -1,92 +1,53 @@
 # Semantic Harness Bridge
 
-This repo demonstrates how to **operationalize** a Semantic Harness declaration — turning `sh:Invariant` and `sh:Metric` from documentation into executable CI and runtime controls.
+This repo **operationalizes** a Semantic Harness — it is not a parallel agent framework.
+
+> **Semantic Harness declares what the system IS.**  
+> **LangGraph executes a compatible workflow.**  
+> **Governance gates prove it can be trusted.**
 
 ---
 
 ## Division of labor
 
-| Concern | semantic-harness | agentic-governance |
-|---------|------------------|-------------------|
-| Declare agent capabilities | `sh:Agent`, `sh:Tool`, `sh:Skill` | Consumes via `harness/harness.jsonld` |
-| Declare policies | `sh:Policy`, `sh:Invariant` | Enforces in middleware + CI |
-| Declare metrics | `sh:Metric`, `sh:probe` | CI runs probes; Prometheus exports live metrics |
-| Execute agent | semantic-runtimes (reference) | LangGraph (this repo's implementation detail) |
-| HDD dev gates | `harness verify`, `hooks install` | CI integrates `harness verify` |
+| Concern | Where |
+|---------|--------|
+| Agents, skills, tools, workflow, policies, invariants | `harness/harness.jsonld` |
+| Load / query declaration | `agent/harness_loader.py` |
+| Multi-agent execution | `agent/workflow.py` |
+| Auth, guardrails, audit | `governance/` |
+| Prove readiness | `evaluation/` + CI |
+| Spec / full CLI validate | sibling [semantic-runtimes](https://github.com/leroyjware/semantic-runtimes) |
 
 ---
 
-## Mapping table
+## Runtime mapping
 
-| Harness object | SDLC gate | Runtime enforcement |
-|----------------|-----------|---------------------|
-| `sh:Invariant` PHI block | `evaluation/phi/` | `output_guardrails.py` |
-| `sh:Invariant` grounding | `evaluation/grounding/` | Citation check in guardrails |
-| `sh:Metric` hallucination rate | `evaluation/hallucination/` | Prometheus `agent_hallucination_rate` |
-| `sh:Metric` latency p95 | `evaluation/latency/` | Prometheus histogram |
-| `sh:Metric` token cost | `evaluation/latency/cost.py` | Prometheus counter |
-| `sh:Policy` tool allowlist | Architecture validation | `authorization.py` |
-| `sh:Goal` goal success | Eval runner | Grafana `agent_goal_success_rate` |
+| Harness | Code |
+|---------|------|
+| `sh:Agent` systemRole + skills | Node system prompts |
+| `sh:Agent` model / temperature | `build_chat_model(...)` |
+| `sh:Agent` hasTool ∩ `sh:Policy` allowlist | Planner tool filter |
+| `sh:Workflow` step IDs | Must match `NODE_REGISTRY` (tested) |
+| Graph **edges** | Explicit in `build_workflow()` — not auto-compiled from JSON-LD |
+| `sh:Invariant` probes | Backed by `evaluation/*.py` scripts in CI |
+| Structural validate | `scripts/validate_harness.py` (always in CI) |
 
----
-
-## Probe example
-
-Harness metric with CI probe (from `harness/harness.jsonld`):
-
-```json
-{
-  "@type": "sh:Metric",
-  "sh:name": "phi-block-rate",
-  "sh:probe": {
-    "sh:command": "python -m evaluation.phi --json",
-    "sh:parser": "json",
-    "sh:valuePath": "$.block_rate",
-    "sh:timeoutSeconds": 120
-  }
-}
-```
-
-CI runs `harness verify harness/harness.jsonld` — blocking invariant fails if `block_rate < 1.0`.
+Honesty matters: topology is **harness-aligned**, not harness-compiled. That keeps the graph reviewable in Python while prompts/tools/policy stay declarative.
 
 ---
 
-## Lifecycle alignment
+## Validate
 
-```mermaid
-flowchart LR
-  DESIGN[Design harness.jsonld]
-  DEV[Develop agent code]
-  EVAL[evaluation/ suites]
-  CI[harness verify + gates]
-  DEPLOY[Deploy with policies]
-  RUN[Runtime middleware]
-  OBS[Prometheus metrics]
-  FEED[Feedback to eval datasets]
-
-  DESIGN --> DEV
-  DEV --> EVAL
-  EVAL --> CI
-  CI --> DEPLOY
-  DEPLOY --> RUN
-  RUN --> OBS
-  OBS --> FEED
-  FEED --> EVAL
+```bash
+make validate-harness
+# structural always; full CLI if ../semantic-runtimes exists
 ```
 
 ---
 
-## Thought leadership positioning
+## Related
 
-> **Semantic Harness declares what the agent IS.**  
-> **Agentic Governance proves the agent is TRUSTED.**
-
-Together they answer the enterprise architect's question: *"How do we industrialize agentic AI without flying blind?"*
-
----
-
-## Related repos
-
-- [semantic-harness](https://github.com/leroyjware/semantic-harness) — open standard
-- [semantic-runtimes](https://github.com/leroyjware/semantic-runtimes) — HDD CLI + reference executor
-- [agentic-governance](.) — this reference architecture
+- [LOCAL.md](./LOCAL.md) — Groq multi-agent local run  
+- [ADD-AN-AGENT.md](./ADD-AN-AGENT.md) — extend the mesh  
+- [PLAN.md](../PLAN.md) — living roadmap  

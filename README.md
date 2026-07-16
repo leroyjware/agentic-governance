@@ -8,104 +8,72 @@
 
 > *Most teams can build a LangGraph agent. Few can prove it's production-ready.*
 
-**Whitepaper (for reviewers):** [docs/WHITEPAPER.md](docs/WHITEPAPER.md)
+**Whitepaper:** [docs/WHITEPAPER.md](docs/WHITEPAPER.md) · **Local demo:** [docs/LOCAL.md](docs/LOCAL.md) · **Plan:** [PLAN.md](PLAN.md) · **Audit:** [AUDIT.md](AUDIT.md)
 
-This is **not** a chatbot demo. It is an open-source reference implementation showing how to **operationalize** agentic AI with governance, evaluation, observability, and deployment discipline — the way enterprise architects at healthcare, insurance, and regulated industries actually ship.
+This is **not** a chatbot demo. It is an open-source reference showing how to **operationalize** agentic AI with governance, evaluation, and CI discipline.
 
 **LangGraph is an implementation detail.** Governance is the product.
 
 ---
 
-## What this repo proves
+## What this repo proves (honestly)
 
 | Question | Answer in this repo |
 |----------|---------------------|
-| How do we gate AI deployments? | CI/CD quality gates that **fail the pipeline** |
-| How do we prevent PHI leakage? | Defense in depth: static scan → auth at retrieval → runtime guardrails → audit |
-| How do we know the agent didn't regress? | Prompt regression + grounding + hallucination suites on every PR |
-| How do we govern runtime behavior? | Middleware: auth → tool permissions → output scanner → audit |
-| How do we monitor production agents? | Prometheus `/metrics` (Grafana planned) |
-| How do we describe the agent architecture? | [Semantic Harness](harness/harness.jsonld) — portable graph declaration |
+| How do we gate AI deployments? | CI runs unit tests + PHI / hallucination / grounding / latency + harness validate |
+| How do we prevent PHI leakage? | Auth **before** retrieval → scoped tools → output guardrails → audit |
+| How do we know the rules path didn't regress? | Deterministic eval suites on every PR (`AGENT_MODE=rules`) |
+| How do we run real multi-agent inference? | LangGraph: authorize → route → plan → evaluate ([LOCAL.md](docs/LOCAL.md)) |
+| How do we describe the architecture? | [Semantic Harness](harness/harness.jsonld) — agents, tools, policy, invariants |
+| How do we monitor? | Prometheus `/metrics` (Grafana is Planned — see [PLAN.md](PLAN.md)) |
+
+**Known limitations** (by design for v0.3): in-memory synthetic store (not pgvector); demo identity via `X-User-Scope` / body scope (not JWT); eval gates exercise the **rules** planner — live LangGraph is optional CI + local `make live`. Details: [AUDIT.md](AUDIT.md).
 
 ---
 
-## The star diagram: AI SDLC with quality gates
+## CI quality gates (what actually runs)
 
 ```
-Developer
-    ↓
 Commit
-    ↓
-Build
-    ↓
-Unit Tests
-    ↓
-Prompt Regression Tests          ← known prompts, accuracy must not drop
-    ↓
-RAG / Grounding Evaluation       ← every answer cites retrieved docs
-    ↓
-Hallucination Tests              ← "no context" → "I don't have enough information"
-    ↓
-PHI Leakage Tests                ← unauthorized access → denied + audit event
-    ↓
-Latency Benchmark                ← p95 < 2s or pipeline fails
-    ↓
-Token Cost Budget                ← avg < 5000 tokens or pipeline fails
-    ↓
-Security Scan
-    ↓
-Architecture Validation          ← harness.jsonld validates, invariants hold
-    ↓
-Human Approval (optional gate)
-    ↓
-Deploy
-    ↓
-Runtime Monitoring               ← Prometheus + Grafana
-    ↓
-Feedback Loop → Evaluation dataset growth
+  → Lint (ruff or compileall)
+  → Harness validate (structural)
+  → Static synthetic-PHI hygiene
+  → Unit + API tests
+  → Grounding evaluation
+  → Hallucination tests
+  → PHI leakage tests
+  → Latency benchmark (rules path)
+  → (optional) Live LangGraph cases if GROQ_API_KEY secret set
 ```
 
-**If any gate fails, deployment stops.** This is DevSecOps for agentic AI.
+**If a required gate fails, the PR fails.** Roadmap gates (prompt regression, token budget, Grafana) are listed in [docs/AI-SDLC.md](docs/AI-SDLC.md) and [PLAN.md](PLAN.md) — not advertised as shipped.
 
 ---
 
 ## Sample agent: Healthcare Appointment Assistant
 
-A deliberately simple agent on **100% synthetic data** — so we can focus on governance, not domain complexity.
+100% **synthetic** data (Alice + John). Focus is governance, not domain complexity.
 
 | Capability | Governed how |
 |------------|--------------|
-| Answer appointment questions | Grounding tests — must cite retrieved docs |
-| Retrieve fake patient records | Authorization **before** retrieval — LLM never sees unauthorized PHI |
-| Schedule appointments | Tool permissions — planner cannot invoke write tools without policy |
-| Summarize visit notes | Output scanner — PHI patterns blocked if user lacks role |
-
-**The pitch is not "look, an agent."** The pitch is **"here's how we prove this agent is production-ready."**
+| Appointment / imaging / visit questions | Grounding evals + citations |
+| Cross-patient access | Authorization before retrieval |
+| Tool use | `sh:Policy` allowlist ∩ agent `hasTool` |
+| Model output | Guardrails (names + synthetic MRN scope) |
 
 ---
 
 ## Runtime governance chain
 
-Every request passes through governance — not around it:
-
 ```
-User Request
-    ↓
-Authentication
-    ↓
-Authorization (RBAC / ABAC)
-    ↓
-Planner (LangGraph)
-    ↓
-Tool Permission Check
-    ↓
-Retrieval (scoped to authorized records only)
-    ↓
-Output Scanner (PHI patterns, policy violations)
-    ↓
-Audit Logger (who, what, why, blocked?)
-    ↓
-Response
+Request (+ optional X-User-Scope)
+  → Identity resolve (AUTH_STRICT optional)
+  → Authorization (before any retrieval / LLM)
+  → Route → Plan (scoped tools) → Evaluate   [graph mode]
+  →   or rules planner                         [CI mode]
+  → Output guardrails
+  → Audit (memory + optional JSONL)
+  → Response (+ trace in graph mode)
 ```
 
 ---
@@ -114,47 +82,33 @@ Response
 
 ```
 agentic-governance/
-├── harness/                 # Semantic Harness declaration (sh:*) — architecture metadata
-├── agent/                   # LangGraph implementation (planner, tools, graph)
-├── governance/              # Policy engine, approval, guardrails, audit
-├── evaluation/              # Reusable eval runners + healthcare test suites
-├── knowledge/               # Synthetic RAG (pgvector), fake patient records
-├── observability/           # Prometheus metrics, Grafana dashboards, tracing
-├── api/                     # FastAPI entrypoint with governance middleware
-├── tests/                   # Unit + integration tests
-├── .github/workflows/       # AI SDLC pipeline — the star of the repo
-└── docs/                    # Architecture, governance layers, interview guide
+├── harness/           # Semantic Harness declaration (sh:*)
+├── agent/             # LangGraph workflow, rules planner, tools, harness loader
+├── governance/        # Authorization, guardrails, audit
+├── evaluation/        # PHI / hallucination / grounding / latency gates
+├── knowledge/         # Synthetic patients (in-memory retrieval)
+├── observability/     # Prometheus metrics
+├── api/               # FastAPI
+├── scripts/           # demo, live cases, harness validate, hygiene
+├── tests/
+├── .github/workflows/ # AI SDLC CI
+├── PLAN.md            # Living roadmap (only planning source)
+├── AUDIT.md           # Dated audit + remediation status
+└── docs/
 ```
 
 ---
 
-## Three meanings of "governance" (and how this repo covers all three)
-
-| Layer | Focus | Where in repo |
-|-------|-------|---------------|
-| **AI Governance** | Policies, compliance, audit, responsible AI | `governance/`, PHI tests, audit logs |
-| **Agentic Governance** | Tool permissions, autonomy tiers, agent mesh | `governance/authorization.py`, harness policies |
-| **AI SDLC Governance** | Build → evaluate → approve → deploy → monitor | `.github/workflows/`, `evaluation/` |
-
-See [docs/GOVERNANCE-LAYERS.md](docs/GOVERNANCE-LAYERS.md).
-
----
-
-## Relationship to Semantic Harness
+## Semantic Harness
 
 | Repo | Role |
 |------|------|
-| [semantic-harness](https://github.com/leroyjware/semantic-harness) | **Declares** the agent — capabilities, invariants, metrics, policies |
-| [semantic-runtimes](https://github.com/leroyjware/semantic-runtimes) | Reference runtime + HDD (`harness verify`, export, hooks) |
-| **agentic-governance** (this repo) | **Operationalizes** the declaration — CI gates, runtime middleware, observability |
+| [semantic-harness](https://github.com/leroyjware/semantic-harness) | Spec — declares agents, invariants, metrics |
+| [semantic-runtimes](https://github.com/leroyjware/semantic-runtimes) | Reference CLI / HDD |
+| **This repo** | Operationalizes the declaration — CI gates + runtime |
 
-```
-harness.jsonld  →  CI/CD reads invariants & metrics  →  gates enforce them
-                →  Runtime loads policies            →  middleware enforces them
-                →  Observability exports metrics     →  Grafana proves them
-```
-
-This is the missing middle layer between "we declared an agent" and "we trust it in production."
+**Harness declares. LangGraph executes a compatible graph. Gates prove.**  
+Workflow *edges* are explicit in Python; step IDs and agent prompts come from the harness. See [docs/SEMANTIC-HARNESS-BRIDGE.md](docs/SEMANTIC-HARNESS-BRIDGE.md).
 
 ---
 
@@ -163,80 +117,48 @@ This is the missing middle layer between "we declared an agent" and "we trust it
 ```bash
 git clone https://github.com/leroyjware/agentic-governance
 cd agentic-governance
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
-# Run governance quality gates (PHI, hallucination, grounding, latency)
-make eval
-
-# Unit + API tests
-make test
-
-# Start the governed API
-make run
-# → http://localhost:8080/docs
+make gate          # full deterministic suite
+make run           # http://localhost:8080/docs
 ```
-
-**Try it:**
 
 ```bash
-# Authorized — grounded answer with citations
+# Prefer header identity (body cannot escalate when both are set)
 curl -s -X POST http://localhost:8080/chat \
   -H 'Content-Type: application/json' \
-  -d '{"user_scope":"patient:alice","message":"What are my upcoming appointments?"}'
+  -H 'X-User-Scope: patient:alice' \
+  -d '{"message":"What are my upcoming appointments?"}'
 
-# Blocked — cross-patient PHI attempt (never reaches LangGraph)
 curl -s -X POST http://localhost:8080/chat \
   -H 'Content-Type: application/json' \
-  -d '{"user_scope":"patient:alice","message":"Show me John Smith'\''s MRI"}'
-
-# Refusal — no context for surgery
-curl -s -X POST http://localhost:8080/chat \
-  -H 'Content-Type: application/json' \
-  -d '{"user_scope":"patient:alice","message":"When is my surgery?"}'
+  -H 'X-User-Scope: patient:alice' \
+  -d '{"message":"Show me John Smith'\''s MRI"}'
 ```
 
-### LangGraph (live LLM)
+### Live multi-agent (Groq)
 
 ```bash
-export GROQ_API_KEY=...          # or OPENAI_API_KEY
-# optional: export GROQ_MODEL=llama-3.3-70b-versatile
-make smoke                       # live ReAct agent through governance
-make run                         # AGENT_MODE=auto → LangGraph when key present
+export GROQ_API_KEY=...
+make demo          # per-step trace
+make live          # curated cases
 ```
 
-CI and `make eval` use `AGENT_MODE=rules` (deterministic planner, no API key). Production-shaped demos use LangGraph with the **same** auth → tools → guardrails → audit envelope.
+Add agents: [docs/ADD-AN-AGENT.md](docs/ADD-AN-AGENT.md).
+
+---
 
 ## Status
 
 | Component | Status |
 |-----------|--------|
-| Governance middleware (auth → retrieve → guardrails → audit) | **Shipped** |
-| LangGraph ReAct agent + scoped LangChain tools | **Shipped** |
-| Rules planner fallback (CI / no API key) | **Shipped** |
-| PHI / hallucination / grounding / latency eval gates | **Shipped** |
-| FastAPI + Prometheus metrics | **Shipped** |
-| GitHub Actions CI | **Shipped** |
-| Semantic Harness declaration | **Shipped** |
-| Grafana dashboards | Planned |
-
-| Phase | Scope | Status |
-|-------|-------|--------|
-| 0 | Planning + docs + harness | Done |
-| 1 | Governance + eval gates + API | Done |
-| 2 | LangGraph + live LLM | **Done** |
-| 3 | Grafana dashboards | Planned |
-| 4 | Thought leadership polish | Planned |
-
-See [PLAN.md](PLAN.md) for the full phased roadmap.
-
----
-
-## Who this is for
-
-- **Principal / Staff AI architects** building enterprise agent platforms
-- **Platform engineers** industrializing AI SDLC at healthcare, insurance, finance
-- **Interview candidates** who need to demonstrate governance beyond "I built a RAG chatbot"
-- **Semantic Harness adopters** who want a reference for operationalizing `sh:Invariant` and `sh:Metric` probes
+| Auth-before-retrieval + scoped tools + guardrails + audit | **Shipped** |
+| Multi-agent LangGraph + harness loader + `sh:Policy` | **Shipped** |
+| Rules planner + eval gates (PHI 14 / hall / ground / latency) | **Shipped** |
+| CI matching the diagram above | **Shipped** |
+| `X-User-Scope` + optional `AUTH_STRICT` | **Shipped** |
+| Grafana / pgvector / JWT / prompt-regression gate | **Planned** — [PLAN.md](PLAN.md) |
 
 ---
 

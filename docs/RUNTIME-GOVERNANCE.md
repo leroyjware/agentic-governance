@@ -1,6 +1,6 @@
 # Runtime Governance Architecture
 
-Governance does not stop at deployment. Every request passes through a **middleware chain** before and after the LangGraph planner.
+Every request passes through a governance envelope before and after the planner (rules or LangGraph).
 
 ---
 
@@ -10,135 +10,83 @@ Governance does not stop at deployment. Every request passes through a **middlew
 sequenceDiagram
   participant U as User
   participant API as FastAPI
+  participant ID as Identity
   participant Auth as Authorization
-  participant G as LangGraph Planner
-  participant RAG as Scoped Retriever
-  participant Tools as Tool Executor
+  participant Eng as Rules or LangGraph
+  participant Tools as Scoped Tools
   participant Guard as Output Guardrails
   participant Audit as Audit Logger
 
-  U->>API: POST /chat
-  API->>Auth: Authenticate + resolve role
-  Auth->>G: Forward with user context
-  G->>RAG: Retrieve (scoped to authorized records)
-  RAG-->>G: Documents (never unauthorized PHI)
-  G->>Tools: Invoke permitted tools only
-  Tools-->>G: Tool results
-  G-->>Guard: Draft response
-  Guard->>Guard: PHI scan + policy check
-  alt Violation
-    Guard->>Audit: Log block event
-    Guard-->>U: 403 / sanitized response
-  else Clean
-    Guard->>Audit: Log success + citations
-    Guard-->>U: 200 response
+  U->>API: POST /chat (+ optional X-User-Scope)
+  API->>ID: Resolve user_scope
+  ID->>Auth: authorize(scope, message)
+  alt Denied
+    Auth->>Audit: governance.block
+    Auth-->>U: denied
+  else Allowed
+    Auth->>Eng: Forward
+    Eng->>Tools: Retrieve / schedule / summarize (scoped)
+    Tools-->>Eng: Results
+    Eng-->>Guard: Draft
+    Guard->>Guard: Name + SYN-MRN checks
+    alt Violation
+      Guard->>Audit: Log block
+      Guard-->>U: denied
+    else Clean
+      Guard->>Audit: Log success
+      Guard-->>U: answer + citations
+    end
   end
 ```
 
 ---
 
-## Middleware components
+## Identity (demo-grade)
 
-### Authentication
+| Mode | Behavior |
+|------|----------|
+| Default | `X-User-Scope` if present (must match body if both set); else body `user_scope` |
+| `AUTH_STRICT=1` | Header **required**; body cannot disagree |
 
-- JWT or API key (demo); pluggable for enterprise IdP
-- Resolves `user_id`, `role`, `patient_scope` (for healthcare demo)
-
-### Authorization (RBAC + ABAC)
-
-**Critical architectural principle:** The LLM does not decide who can see PHI.
-
-```
-User → Identity → Authorization → Retrieval → LLM
-```
-
-If retrieval never returns unauthorized records, the model cannot leak what it never received.
-
-| Role | Can retrieve | Can schedule | Can summarize |
-|------|--------------|--------------|---------------|
-| `patient` | Own records only | Own appointments | Own visit notes |
-| `clinician` | Assigned patients | Assigned patients | Assigned patients |
-| `admin` | Audit metadata only | No clinical write | No |
-
-Implementation: `governance/authorization.py`
-
-### Tool permissions
-
-Before any tool invocation:
-
-1. Load agent tool allowlist from harness `sh:Policy`
-2. Check user role permissions
-3. Deny with audit event if violation
-
-### Output guardrails
-
-Before response returns:
-
-1. Scan for PHI patterns (SSN, MRN, DOB combos)
-2. Verify response PHI matches authorized scope
-3. Redact or block
-4. Escalate to human review queue for high-risk blocks (stub in Phase 4)
-
-Implementation: `governance/output_guardrails.py`
-
-### Audit logger
-
-Structured events:
-
-```json
-{
-  "event": "governance.block",
-  "user_id": "user-123",
-  "reason": "unauthorized_patient_access",
-  "requested_resource": "patient:john-smith:mri",
-  "agent": "healthcare-planner",
-  "timestamp": "2026-07-14T12:00:00Z"
-}
-```
-
-Implementation: `governance/audit.py`
+This is **not** JWT/OIDC. It demonstrates “identity before tools” without pretending to ship an IdP. Enterprise adopters plug their IdP and map claims → `user_scope`.
 
 ---
 
-## LangGraph placement
+## Authorization
 
-LangGraph orchestrates **inside** the governance boundary:
+**Critical principle:** The LLM does not decide who can see PHI.
 
-```
-┌─────────────────────────────────────────────┐
-│  Governance Envelope                        │
-│  ┌───────────────────────────────────────┐  │
-│  │  LangGraph (implementation detail)    │  │
-│  │  - Planner node                       │  │
-│  │  - Retrieval node (pre-authorized)    │  │
-│  │  - Tool nodes (permission-checked)    │  │
-│  └───────────────────────────────────────┘  │
-└─────────────────────────────────────────────┘
-```
-
-Swapping LangGraph for another orchestrator should not change the governance chain.
+`governance/authorization.py` runs **before** retrieval and before LangGraph routing. Cross-patient name / id references are denied for the synthetic Alice/John matrix.
 
 ---
 
-## Multi-agent layout (Phase 4)
+## Tool permissions
 
-| Agent | Role | Model tier |
-|-------|------|------------|
-| Planner | Route intent, select tools | Fast |
-| Research | Gather context | Fast |
-| Retrieval | Execute scoped RAG | Fast |
-| Evaluation | Self-check grounding before respond | Frontier |
-
-Maker-checker: Evaluation agent on stronger model validates Planner output before user sees response.
+Allowlist = agent `sh:hasTool` ∩ `sh:Policy` allowlist (`harness_loader.allowed_tools_for_agent`).  
+Patient id is injected via `contextvars` — the model cannot pass a free-form patient id into tools.
 
 ---
 
-## Configuration
+## Output guardrails
 
-Runtime policies merge from:
+`governance/output_guardrails.py` blocks other-patient names and `SYN-MRN-*` digits outside the caller’s scope.
 
-1. `harness/harness.jsonld` — canonical declaration
-2. `governance/policies/runtime.yaml` — environment overrides
-3. Environment variables — secrets only
+---
 
-Harness wins on conflict for tool allowlists and invariants.
+## Audit
+
+In-memory ring for `/audit`, plus optional JSONL via `AUDIT_LOG_PATH` (default `data/audit.jsonl`; use `off` in CI).
+
+---
+
+## Dual engines
+
+| Mode | Engine |
+|------|--------|
+| `rules` | Deterministic planner — CI / evals |
+| `graph` | Multi-agent LangGraph — live demos |
+| `auto` | Graph if LLM key present |
+
+Same authorize → guardrails → audit envelope in both modes.
+
+See [LOCAL.md](./LOCAL.md) and [PLAN.md](../PLAN.md).

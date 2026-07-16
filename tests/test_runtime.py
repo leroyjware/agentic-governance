@@ -34,9 +34,12 @@ def test_use_langgraph_false_in_rules_mode():
     assert use_langgraph("rules") is False
 
 
-@pytest.mark.skipif(not llm_configured(), reason="No OPENAI_API_KEY or GROQ_API_KEY")
+@pytest.mark.skipif(
+    os.environ.get("RUN_LIVE_LLM") != "1" or not llm_configured(),
+    reason="Set RUN_LIVE_LLM=1 and GROQ_API_KEY (or OPENAI_API_KEY) for live smoke",
+)
 def test_langgraph_live_smoke():
-    """Live smoke — only runs when an API key is present."""
+    """Opt-in live smoke — keep make test / CI deterministic even if a key is exported."""
     os.environ.setdefault("AGENT_MODE", "graph")
     result = handle_chat(
         "patient:alice",
@@ -44,5 +47,7 @@ def test_langgraph_live_smoke():
         mode="graph",
     )
     assert result["blocked"] is False
-    assert result.get("engine") == "langgraph"
+    assert "langgraph" in str(result.get("engine", ""))
     assert result["answer"]
+    assert result.get("evaluator_approved") is True
+    assert result.get("trace")

@@ -1,5 +1,10 @@
-# Placeholder — Phase 2 AI SDLC workflow
+# CI — AI SDLC
 
-The full pipeline is documented in [docs/AI-SDLC.md](../docs/AI-SDLC.md).
+Workflow: [`ci.yml`](./ci.yml)
 
-Phase 2 will add `ai-sdlc.yml` implementing all gates from the README star diagram.
+| Job | Requires secret? | Purpose |
+|-----|------------------|---------|
+| `governance-gates` | No | Lint, harness validate, hygiene, tests, eval gates |
+| `live-langgraph` | Optional `GROQ_API_KEY` | Real multi-agent cases |
+
+Gate definitions: [docs/AI-SDLC.md](../../docs/AI-SDLC.md). Roadmap: [PLAN.md](../../PLAN.md).

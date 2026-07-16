@@ -6,33 +6,34 @@ Thank you for helping establish thought leadership in agentic AI governance.
 
 | Area | Examples |
 |------|----------|
-| **Evaluation suites** | New PHI scenarios, grounding cases, vertical-specific tests |
-| **Governance patterns** | Authorization models, output guardrail rules |
-| **Harness declarations** | New example agents with invariants + probes |
-| **Docs** | Architecture patterns, interview scenarios, comparisons |
-| **CI gates** | New quality gates with documented fail criteria |
+| Evaluation suites | New PHI / grounding / hallucination scenarios |
+| Governance patterns | Authorization rules, guardrail checks |
+| Harness declarations | Agents, tools, policies, invariants |
+| Docs | Keep claims aligned with CI — update [PLAN.md](PLAN.md) |
+| CI gates | New gates with an entry in [docs/AI-SDLC.md](docs/AI-SDLC.md) |
 
 ## Development setup
 
 ```bash
 git clone https://github.com/leroyjware/agentic-governance
 cd agentic-governance
-uv sync --all-extras
-make validate-harness
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+make gate
 ```
 
 ## Pull request requirements
 
-1. `make validate-harness` passes
-2. `make lint` passes (when code exists)
-3. New eval suites include JSON report format
-4. No real PHI — synthetic data only
-5. Document new gates in `docs/AI-SDLC.md`
+1. `make gate` passes
+2. No real PHI — synthetic data only (`SYN-MRN-*`)
+3. If you add a CI gate, document it under **Shipped** in `docs/AI-SDLC.md` and update the README diagram
+4. If you defer work, add it under **Next** in `PLAN.md` — do not leave stale “Phase N” READMEs
 
 ## Philosophy
 
-- **Governance over demo** — every PR should strengthen trust, not just features
-- **Harness-first** — declare invariants before implementing enforcement
-- **LangGraph is swappable** — don't couple governance to one orchestrator
+- **Governance over demo** — every PR should strengthen trust
+- **Harness-first** — declare policy/invariants before enforcing them
+- **LangGraph is swappable** — do not couple governance to one orchestrator
+- **One living plan** — `PLAN.md` only; archives belong in git history
 
-See [PLAN.md](PLAN.md) for roadmap phases.
+See [PLAN.md](PLAN.md) and [AUDIT.md](AUDIT.md).

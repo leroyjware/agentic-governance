@@ -1,47 +1,38 @@
-# Agent (LangGraph + rules fallback)
+# Agent — multi-agent LangGraph + Semantic Harness
 
 **Status: shipped**
 
 ```
 agent/
-├── graph.py           # LangGraph ReAct agent (create_react_agent)
-├── runtime.py         # authorize → graph|rules → guardrails → audit
-├── planner.py         # Deterministic rules engine (CI / no API key)
-├── tools.py           # Scoped LangChain tools
-├── llm.py             # OpenAI-compatible factory (OpenAI / Groq)
-├── prompts/system.md  # System doctrine
-└── policies/          # Runtime policy YAML
+├── harness_loader.py   # Load harness/harness.jsonld (declare → query)
+├── workflow.py         # StateGraph: authorize→route→plan→evaluate→finalize
+├── graph.py            # Entrypoint → workflow
+├── runtime.py          # auto|graph|rules mode switch
+├── planner.py          # Deterministic rules engine (CI)
+├── tools.py            # Scoped LangChain tools
+├── llm.py              # Groq / OpenAI factory
+└── prompts/            # Legacy single-prompt file (workflow uses harness)
 ```
 
-## Dual mode
+## How Semantic Harness drives this
 
-| Mode | When | Engine |
-|------|------|--------|
-| `auto` (default) | `OPENAI_API_KEY` or `GROQ_API_KEY` set | **LangGraph** |
-| `auto` | no key | Rules planner |
-| `graph` | key required | **LangGraph** |
-| `rules` | CI / eval gates | Rules planner |
+| Harness object | Runtime |
+|----------------|---------|
+| `sh:Agent` (Router, Planner, Evaluator) | Prompts + models via `harness_loader` |
+| `sh:Skill` | Appended into agent system prompts |
+| `sh:Tool` + policy allowlist | Planner tool filter |
+| `sh:Workflow` steps | Graph topology in `workflow.py` |
+| `sh:Invariant` | `evaluation/*` + CI |
 
-Governance always runs **before** the agent: unauthorized cross-patient requests never reach LangGraph.
+**Declare in JSON-LD. Execute in LangGraph. Prove with gates.**
 
-## Tools (scoped via contextvars)
+## Add an agent
 
-- `retrieve_records` — only authorized patient
-- `schedule_appointment` — synthetic booking
-- `summarize_visit` — visit notes
-
-The model **cannot** pass a patient id into tools. Scope comes from the authenticated request.
+1. Add `sh:Agent` (+ skill) to `harness/harness.jsonld`
+2. Implement `node_youragent(state)` in `workflow.py`
+3. Register in `NODE_REGISTRY` and add edges
+4. `PYTHONPATH=. python scripts/demo_workflow.py`
 
 ## Local
 
-```bash
-pip install -r requirements.txt
-
-# CI-safe gates (rules)
-AGENT_MODE=rules make eval
-
-# Live LangGraph (needs key)
-export GROQ_API_KEY=...   # or OPENAI_API_KEY
-PYTHONPATH=. python scripts/smoke_langgraph.py
-make run
-```
+See [docs/LOCAL.md](../docs/LOCAL.md).

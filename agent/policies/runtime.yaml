@@ -1,12 +1,8 @@
-# Runtime policy overrides (loaded by future policy_engine).
-# Tool allowlist is enforced in code via agent.tools — models cannot choose a patient scope.
-
-autonomy_tier: L1
-allowed_tools:
-  - retrieve_records
-  - schedule_appointment
-  - summarize_visit
-forbidden:
-  - cross_patient_retrieval
-  - unscoped_queries
-synthetic_data_only: true
+# Optional local overrides (documentation only).
+# Canonical tool allowlist: harness/harness.jsonld → sh:Policy healthcare-tool-policy
+# Enforced at runtime via agent.harness_loader.LoadedHarness.allowed_tools_for_agent
+#
+# Identity:
+#   X-User-Scope header preferred; AUTH_STRICT=1 requires the header.
+# Audit:
+#   AUDIT_LOG_PATH=data/audit.jsonl (default) or "off" for tests/CI

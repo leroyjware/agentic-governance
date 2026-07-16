@@ -1,4 +1,4 @@
-"""FastAPI — governance middleware chain + LangGraph / rules agent."""
+"""FastAPI — governed chat API (rules or LangGraph)."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import os
 import time
 from typing import Literal
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Header, HTTPException, Query
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
@@ -15,19 +15,25 @@ from agent.runtime import handle_chat, resolve_mode, use_langgraph
 from governance import audit
 from observability import metrics
 
+APP_VERSION = "0.3.0"
+
 app = FastAPI(
     title="Agentic Governance",
     description=(
         "Healthcare appointment assistant — synthetic data, real governance. "
-        "LangGraph when OPENAI_API_KEY/GROQ_API_KEY set; rule-based planner for CI."
+        "LangGraph when GROQ_API_KEY/OPENAI_API_KEY set; rule-based planner for CI. "
+        "Identity: prefer X-User-Scope; set AUTH_STRICT=1 to require it."
     ),
-    version="0.2.0",
+    version=APP_VERSION,
 )
 
 
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1)
-    user_scope: str = Field(..., description="e.g. patient:alice")
+    user_scope: str | None = Field(
+        default=None,
+        description="e.g. patient:alice — ignored when X-User-Scope is set; required if header absent",
+    )
     mode: Literal["auto", "graph", "rules"] | None = Field(
         default=None,
         description="auto (default) | graph (require LLM) | rules (CI deterministic)",
@@ -41,6 +47,40 @@ class ChatResponse(BaseModel):
     blocked: bool = False
     reason: str | None = None
     engine: str | None = None
+    intent: str | None = None
+    evaluator_approved: bool | None = None
+    trace: list[dict] | None = None
+    user_scope: str | None = None
+
+
+def resolve_user_scope(
+    body_scope: str | None,
+    header_scope: str | None,
+) -> str:
+    """Resolve caller identity.
+
+    - If X-User-Scope is present, it wins (body cannot escalate).
+    - If AUTH_STRICT=1, header is required and body must match when provided.
+    - Otherwise body user_scope is accepted for local demos.
+    """
+    strict = os.getenv("AUTH_STRICT", "0").strip() == "1"
+    header = (header_scope or "").strip() or None
+    body = (body_scope or "").strip() or None
+
+    if strict:
+        if not header:
+            raise HTTPException(status_code=401, detail="X-User-Scope header required (AUTH_STRICT=1)")
+        if body and body != header:
+            raise HTTPException(status_code=403, detail="user_scope does not match X-User-Scope")
+        return header
+
+    if header:
+        if body and body != header:
+            raise HTTPException(status_code=403, detail="user_scope does not match X-User-Scope")
+        return header
+    if body:
+        return body
+    raise HTTPException(status_code=400, detail="user_scope or X-User-Scope required")
 
 
 @app.get("/health")
@@ -55,7 +95,8 @@ def health() -> dict:
         "agent_mode": mode,
         "llm_configured": llm_configured(),
         "langgraph_active": active,
-        "version": "0.2.0",
+        "auth_strict": os.getenv("AUTH_STRICT", "0") == "1",
+        "version": APP_VERSION,
     }
 
 
@@ -66,14 +107,18 @@ def prometheus_metrics() -> Response:
 
 
 @app.post("/chat", response_model=ChatResponse)
-def chat(req: ChatRequest) -> ChatResponse:
+def chat(
+    req: ChatRequest,
+    x_user_scope: str | None = Header(default=None, alias="X-User-Scope"),
+) -> ChatResponse:
     start = time.perf_counter()
-    # Allow env AGENT_MODE override when request omits mode
+    user_scope = resolve_user_scope(req.user_scope, x_user_scope)
+
     mode = req.mode
     if mode is None and os.getenv("AGENT_MODE"):
         mode = resolve_mode()  # type: ignore[assignment]
 
-    result = handle_chat(req.user_scope, req.message, mode=mode)
+    result = handle_chat(user_scope, req.message, mode=mode)
 
     if result.get("blocked"):
         metrics.record_phi_block()
@@ -93,6 +138,10 @@ def chat(req: ChatRequest) -> ChatResponse:
         blocked=result.get("blocked", False),
         reason=result.get("reason"),
         engine=result.get("engine"),
+        intent=result.get("intent"),
+        evaluator_approved=result.get("evaluator_approved"),
+        trace=result.get("trace"),
+        user_scope=user_scope,
     )
 
 

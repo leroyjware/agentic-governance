@@ -78,7 +78,9 @@ def run_planner(user_scope: str, message: str) -> dict:
         answer += f" [sources: {', '.join(citations)}]"
 
     names = _SCOPE_NAMES.get(user_scope, set())
-    safe, guard_reason = output_guardrails.scan_response(answer, names)
+    safe, guard_reason = output_guardrails.scan_response(
+        answer, names, user_scope=user_scope
+    )
     if not safe:
         audit.log_event("governance.block", user_scope=user_scope, reason=guard_reason, message=message)
         return {

@@ -266,18 +266,14 @@ Try the three canonical scenarios:
 
 | Mode | Engine | Purpose |
 |------|--------|---------|
-| `graph` / `auto` + API key | **LangGraph** ReAct + scoped tools | Realistic agent demos |
+| `graph` / `auto` + API key | **LangGraph** multi-agent: Router → Planner → Evaluator | Realistic inference demos |
 | `rules` / CI | Deterministic planner | Quality gates without LLM spend |
 
-Unauthorized requests are denied **before** either engine runs.
+Unauthorized requests are denied **before** either engine runs. The Semantic Harness declares agents, tools, policy, and invariants; LangGraph executes a compatible graph; evaluation gates prove trust on the rules path (live graph via optional CI / `make live`). See [LOCAL.md](./LOCAL.md) and [PLAN.md](../PLAN.md).
 
 ## Roadmap
 
-| Phase | Focus |
-|-------|--------|
-| **Shipped** | Governance chain, LangGraph agent, rules fallback, eval gates, FastAPI, Prometheus, harness, CI |
-| **Next** | Grafana dashboards, richer eval corpora |
-| **Later** | Human-in-the-loop approval for high-risk tools |
+Living tracker: **[PLAN.md](../PLAN.md)** (shipped vs next). No dead phase checklists.
 
 The orchestrator can evolve. The governance envelope should not have to be reinvented.
 

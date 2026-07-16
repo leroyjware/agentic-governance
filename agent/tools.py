@@ -139,3 +139,11 @@ def summarize_visit(focus: str = "latest") -> str:
 
 
 ALL_TOOLS = [retrieve_records, schedule_appointment, summarize_visit]
+
+
+def tools_by_names(names: set[str] | None = None):
+    """Return LangChain tools filtered by name (harness policy / agent allowlist)."""
+    if not names:
+        return list(ALL_TOOLS)
+    selected = [t for t in ALL_TOOLS if t.name in names]
+    return selected or list(ALL_TOOLS)

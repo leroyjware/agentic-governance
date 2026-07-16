@@ -6,28 +6,31 @@ This repository uses **100% synthetic healthcare data**. No real PHI. Ever.
 
 ## Rules
 
-1. All patient names, MRNs, DOBs, and clinical notes are **generated** (Faker / hand-crafted fixtures)
-2. Static CI scan rejects real PHI patterns in commits
-3. README and docs clearly state "demonstration only — not HIPAA compliant"
-4. No connectors to real EHR systems in this reference implementation
+1. Patient names, MRNs, and clinical notes are hand-crafted fixtures (or clearly fake).
+2. MRNs use the `SYN-MRN-*` prefix only.
+3. CI runs `scripts/static_phi_hygiene.py` to reject SSN-like patterns and non-synthetic MRNs in fixtures.
+4. Docs state: demonstration only — **not** HIPAA compliant.
+5. No connectors to real EHR systems.
 
 ---
 
-## Synthetic patient schema
+## Current corpus
+
+**Path:** `knowledge/data/patients.json`  
+**Count:** 2 patients (`patient:alice`, `patient:john`)
 
 ```json
 {
-  "patient_id": "syn-patient-001",
+  "patient_id": "patient:alice",
   "display_name": "Alice Chen",
   "mrn": "SYN-MRN-00001",
-  "dob": "1985-03-15",
   "appointments": [],
   "visit_notes": [],
   "imaging": []
 }
 ```
 
-Files live in `knowledge/documents/synthetic/patients/` (Phase 1).
+Retrieval is **in-memory keyword filtering** (`knowledge/synthetic.py`) — not pgvector. That is intentional for a governance showcase.
 
 ---
 
@@ -37,14 +40,11 @@ Files live in `knowledge/documents/synthetic/patients/` (Phase 1).
 |------------|------------------|-----------------|
 | `patient:alice` | Yes | No |
 | `patient:john` | No | Yes |
-| `clinician:team-a` | Assigned only | Assigned only |
 
-PHI leakage tests in `evaluation/phi/` encode this matrix.
+Encoded in `evaluation/phi.py` and `governance/authorization.py`.
 
 ---
 
 ## Why synthetic?
 
-Governance architecture is the subject. Real PHI would distract with BAA, IRB, and compliance scope that this reference repo is not designed to satisfy.
-
-The **controls demonstrated** transfer to production systems with real data and proper legal review.
+Governance architecture is the subject. Real PHI would force BAA / IRB scope this reference repo is not designed to satisfy. The **control patterns** transfer to production systems with proper legal review.

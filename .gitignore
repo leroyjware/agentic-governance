@@ -18,6 +18,10 @@ htmlcov/
 # Evaluation reports (generated)
 evaluation/reports/*.json
 
+# Runtime audit log
+data/audit.jsonl
+data/
+
 # IDE
 .idea/
 .vscode/

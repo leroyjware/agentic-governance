@@ -1,14 +1,14 @@
-# Governance layer — Phase 1
+# Governance
+
+Runtime trust controls — the center of this repository.
 
 ```
 governance/
-├── policy_engine.py      # Load harness + YAML policies
-├── authorization.py      # RBAC/ABAC — auth BEFORE retrieval
-├── output_guardrails.py  # PHI scan, block, redact
-├── audit.py              # Structured audit events
-├── quality_gates.py      # Local gate runner (CI uses evaluation/)
-├── approval.py           # Human-in-loop stub — Phase 4
-└── static_scan.py        # Pre-commit PHI pattern scan — Phase 2
+├── authorization.py      # Auth BEFORE retrieval (cross-patient block)
+├── output_guardrails.py  # Name + SYN-MRN scope checks
+└── audit.py              # In-memory events + optional JSONL (AUDIT_LOG_PATH)
 ```
 
-**Center of the repository.** Not LangGraph.
+Tool allowlists come from Semantic Harness `sh:Policy` via `agent/harness_loader.py`.
+
+See [PLAN.md](../PLAN.md) for deferred items (JWT, human approval UI).

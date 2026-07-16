@@ -1,5 +1,9 @@
-# Observability — Phase 3
+# Observability
 
-Prometheus metrics, Grafana dashboards, OpenTelemetry tracing.
+```
+observability/
+└── metrics.py    # Prometheus counters + latency histogram → GET /metrics
+```
 
-Target metrics: goal success %, hallucination rate, PHI violations, tool errors, latency, token cost, human escalations.
+**Shipped:** request counts, PHI blocks, refusals, latency.  
+**Planned:** Grafana dashboards, OpenTelemetry — [PLAN.md](../PLAN.md).

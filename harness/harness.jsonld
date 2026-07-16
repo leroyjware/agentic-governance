@@ -5,16 +5,18 @@
       "@id": "urn:uuid:hcag0001-0001-4000-8000-000000000001",
       "@type": "sh:Harness",
       "sh:name": "Healthcare Appointment Assistant",
-      "sh:description": "Synthetic-data healthcare scheduling assistant demonstrating enterprise agentic governance: authorization-before-retrieval, PHI guardrails, grounding requirements, and CI quality gates.",
+      "sh:description": "Multi-agent synthetic healthcare assistant: authorize → route → plan (tools) → evaluate (maker-checker). Semantic Harness declares; LangGraph executes; governance gates prove trust.",
       "sh:specVersion": "0.1",
       "sh:agents": [
+        "urn:uuid:hcag0004-0004-4000-8000-000000000004",
         "urn:uuid:hcag0002-0002-4000-8000-000000000002",
         "urn:uuid:hcag0003-0003-4000-8000-000000000003"
       ],
       "sh:workflows": ["urn:uuid:hcag0010-0010-4000-8000-000000000010"],
       "sh:skills": [
         "urn:uuid:hcag0020-0020-4000-8000-000000000020",
-        "urn:uuid:hcag0021-0021-4000-8000-000000000021"
+        "urn:uuid:hcag0021-0021-4000-8000-000000000021",
+        "urn:uuid:hcag0022-0022-4000-8000-000000000022"
       ],
       "sh:tools": [
         "urn:uuid:hcag0030-0030-4000-8000-000000000030",
@@ -40,12 +42,23 @@
       ]
     },
     {
+      "@id": "urn:uuid:hcag0004-0004-4000-8000-000000000004",
+      "@type": "sh:Agent",
+      "sh:name": "Router",
+      "sh:description": "Classifies intent: appointments, imaging, visit summary, schedule, or refuse.",
+      "sh:systemRole": "You are an intent router for a synthetic healthcare assistant. Classify the user message into exactly one intent. Reply with JSON only: {\"intent\": \"appointments|imaging|summary|schedule|unknown\", \"rationale\": \"...\"}. Do not answer the clinical question yourself.",
+      "sh:model": "llama-3.3-70b-versatile",
+      "sh:temperature": 0.0,
+      "sh:maxTurns": 1,
+      "sh:hasSkill": ["urn:uuid:hcag0022-0022-4000-8000-000000000022"]
+    },
+    {
       "@id": "urn:uuid:hcag0002-0002-4000-8000-000000000002",
       "@type": "sh:Agent",
       "sh:name": "Healthcare Planner",
-      "sh:description": "Routes patient requests, invokes authorized tools, produces grounded responses.",
-      "sh:systemRole": "You are a healthcare appointment assistant using only synthetic demo data. Answer questions about appointments, schedules, and visit summaries for authorized patients only. Always cite retrieved documents. If you lack context, say you don't have enough information. Never fabricate clinical details.",
-      "sh:model": "gpt-4o-mini",
+      "sh:description": "Tool-using agent: retrieve, schedule, summarize within authorized scope.",
+      "sh:systemRole": "You are a healthcare appointment assistant using only synthetic demo data. Use tools to retrieve facts. Never invent appointments, imaging, or clinical details. Always cite doc_id values from tool results as [sources: ...]. If tools return nothing relevant, say: I don't have enough information to answer that. Never claim HIPAA compliance.",
+      "sh:model": "llama-3.3-70b-versatile",
       "sh:temperature": 0.2,
       "sh:maxTurns": 5,
       "sh:hasSkill": ["urn:uuid:hcag0020-0020-4000-8000-000000000020"],
@@ -60,22 +73,28 @@
       "@id": "urn:uuid:hcag0003-0003-4000-8000-000000000003",
       "@type": "sh:Agent",
       "sh:name": "Grounding Evaluator",
-      "sh:description": "Maker-checker: validates planner output before user sees response.",
-      "sh:systemRole": "Review draft responses for grounding, PHI scope, and policy compliance. Reject responses that cite unauthorized records or lack required citations.",
-      "sh:model": "gpt-4o",
+      "sh:description": "Maker-checker: validates planner draft before the user sees it.",
+      "sh:systemRole": "You are a grounding and PHI-scope evaluator. The maker never validates their own work. Given a user question, authorized patient scope, retrieved citations, and a draft answer, reply with JSON only: {\"approved\": true|false, \"score\": 0.0-1.0, \"feedback\": \"...\", \"requires_citation\": true|false}. Reject if factual claims lack citations, if another patient's name/PHI appears, or if the draft invents clinical facts. Approve refusals that correctly say there is not enough information.",
+      "sh:model": "llama-3.3-70b-versatile",
       "sh:temperature": 0.0,
-      "sh:maxTurns": 2,
+      "sh:maxTurns": 1,
       "sh:hasSkill": ["urn:uuid:hcag0021-0021-4000-8000-000000000021"]
     },
     {
       "@id": "urn:uuid:hcag0010-0010-4000-8000-000000000010",
       "@type": "sh:Workflow",
       "sh:name": "appointment-assistant-flow",
+      "sh:description": "authorize → route → plan → evaluate (conditional reject).",
       "sh:steps": [
         {
           "sh:stepId": "authorize",
           "sh:stepKind": "function",
           "sh:toolRef": "urn:uuid:hcag0033-0033-4000-8000-000000000033"
+        },
+        {
+          "sh:stepId": "route",
+          "sh:stepKind": "agent",
+          "sh:agentRef": "urn:uuid:hcag0004-0004-4000-8000-000000000004"
         },
         {
           "sh:stepId": "plan",
@@ -90,6 +109,12 @@
       ]
     },
     {
+      "@id": "urn:uuid:hcag0022-0022-4000-8000-000000000022",
+      "@type": "sh:Skill",
+      "sh:name": "routing-doctrine",
+      "sh:body": "1. appointments — upcoming visits, schedule questions\n2. imaging — MRI, X-ray, scans\n3. summary — visit notes / chart summary\n4. schedule — user wants to book a new appointment\n5. unknown — cannot classify; planner may still try tools"
+    },
+    {
       "@id": "urn:uuid:hcag0020-0020-4000-8000-000000000020",
       "@type": "sh:Skill",
       "sh:name": "healthcare-assistant-doctrine",
@@ -99,7 +124,7 @@
       "@id": "urn:uuid:hcag0021-0021-4000-8000-000000000021",
       "@type": "sh:Skill",
       "sh:name": "grounding-checker-doctrine",
-      "sh:body": "1. Maker never validates own work — separate evaluator agent.\n2. Reject responses without citations for factual claims.\n3. Reject any PHI outside authorized patient scope."
+      "sh:body": "1. Maker never validates own work — separate evaluator agent.\n2. Reject responses without citations for factual claims.\n3. Reject any PHI outside authorized patient scope.\n4. Approve honest refusals."
     },
     {
       "@id": "urn:uuid:hcag0030-0030-4000-8000-000000000030",
@@ -238,7 +263,7 @@
       "@id": "urn:uuid:hcag0063-0063-4000-8000-000000000063",
       "@type": "sh:Invariant",
       "sh:name": "latency-budget",
-      "sh:description": "p95 latency must stay under 2000ms.",
+      "sh:description": "p95 latency must stay under 2000ms for rules path; live LLM uses separate budget.",
       "sh:predicate": "metrics['latency-p95-ms'] <= 2000",
       "sh:severity": "blocking"
     }

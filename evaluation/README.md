@@ -1,17 +1,15 @@
-# Evaluation framework — Phase 2
+# Evaluation gates
+
+Deterministic quality gates used by `make eval` and CI (`AGENT_MODE=rules`).
 
 ```
 evaluation/
-├── runner.py                 # Machine-readable JSON reports
-├── hallucination/            # No-context → refusal tests
-├── phi/                      # Unauthorized access scenarios
-├── prompt_regression/        # Golden prompts + baseline accuracy
-├── grounding/                # Citation coverage verification
-├── latency/                  # p95 + token cost budgets
-├── benchmarks/               # Aggregate scenario runners
-└── baselines/                # Committed baseline metrics
+├── phi.py             # Cross-patient access matrix
+├── hallucination.py   # Refusal when no grounded context
+├── grounding.py       # Citations required for factual answers
+└── latency.py         # Rules-path p95 budget
 ```
 
-Every suite produces `evaluation/reports/*.json` for CI artifacts.
+These call `agent.planner.run_planner`, not LangGraph. Live graph coverage is `scripts/live_graph_cases.py` (optional CI job).
 
-See [docs/AI-SDLC.md](../docs/AI-SDLC.md) for gate pass criteria.
+Roadmap: prompt regression, token budget — [PLAN.md](../PLAN.md).
