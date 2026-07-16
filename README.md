@@ -49,7 +49,7 @@ Commit
   → (optional) Live LangGraph cases if GROQ_API_KEY secret set
 ```
 
-**If a required gate fails, the PR fails.** Roadmap gates (prompt regression, token budget, Grafana) are listed in [docs/AI-SDLC.md](docs/AI-SDLC.md) and [PLAN.md](PLAN.md) — not advertised as shipped.
+**If a required gate fails, the PR fails.** Deferred gates (token budget, JWT, HITL) are in [PLAN.md](PLAN.md) — not advertised as shipped.
 
 ---
 
@@ -104,11 +104,11 @@ agentic-governance/
 
 ## Semantic Harness
 
-| Repo | Role |
-|------|------|
-| [semantic-harness](https://github.com/leroyjware/semantic-harness) | Spec — declares agents, invariants, metrics |
-| [semantic-runtimes](https://github.com/leroyjware/semantic-runtimes) | Reference CLI / HDD |
-| **This repo** | Operationalizes the declaration — CI gates + runtime |
+| Piece | Role |
+|-------|------|
+| [semantic-harness.org](https://semantic-harness.org) | Public face of the Semantic Harness standard |
+| Spec / runtimes (local) | Spec + reference CLI — open-source when ready; this repo embeds example harnesses |
+| **This repo** | Operationalizes the declaration — CI gates + runtime + evidence |
 
 **Harness declares. LangGraph executes a compatible graph. Gates prove.**  
 Workflow *edges* are explicit in Python; step IDs and agent prompts come from the harness. See [docs/SEMANTIC-HARNESS-BRIDGE.md](docs/SEMANTIC-HARNESS-BRIDGE.md).

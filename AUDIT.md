@@ -21,7 +21,7 @@
 | Synthetic data docs wrong | **Remediated** | `docs/SYNTHETIC-DATA.md` |
 | Harness validate not in CI | **Remediated** | `scripts/validate_harness.py` in CI |
 | ADD-AN-AGENT API drift | **Remediated** | Rewritten |
-| Observability incomplete | **Accepted** | Grafana Planned in PLAN.md |
+| Observability incomplete | **Remediated** | `/metrics` + optional `make obs-up` (Prom+Grafana) |
 | `make lint` missing | **Remediated** | Makefile + CI |
 | Unused MRN pattern | **Remediated** | Guardrails enforce SYN-MRN scope |
 | Version / package drift | **Remediated** | `0.3.0`, pip documented |
@@ -35,9 +35,9 @@
 
 Honest, demoable **governance reference**: dual-mode runtime, multi-agent LangGraph, harness-driven prompts/tools/policy, CI that matches the README, expanded PHI suite, light identity header, audit JSONL option.
 
-Still **not** a full enterprise platform (no JWT, pgvector, Grafana). That is intentional — see **Next** in [PLAN.md](PLAN.md).
+Still **not** a full enterprise platform (no JWT, pgvector, HITL UI). That is intentional — see Deferred in [PLAN.md](PLAN.md).
 
-> Working governed agent envelope with LangGraph multi-agent demos, harness policy enforcement, and deterministic quality gates that match what CI runs.
+> Working governed agent envelope with LangGraph multi-agent demos, harness policy enforcement, evidence/score per request, and deterministic quality gates that match what CI runs.
 
 ---
 
@@ -67,8 +67,8 @@ POST /chat → identity → authorize → rules planner | LangGraph workflow →
 
 ### Showcase guidance
 
-**Lead with:** auth-before-retrieval, dual-mode, harness policy, curl + `make demo` trace.  
-**Preempt:** not JWT; not pgvector; eval gates are rules-path; live graph optional.
+**Lead with:** auth-before-retrieval, evidence pack + score, CI gates, `/ui` PHI demo.  
+**Preempt:** not JWT; not pgvector; not HITL UI; eval gates are rules-path; live graph optional.
 
 ### Highest-impact items (done this pass)
 
