@@ -29,6 +29,7 @@ eval:
 	AGENT_MODE=rules AUDIT_LOG_PATH=off python evaluation/grounding.py
 	AGENT_MODE=rules AUDIT_LOG_PATH=off python evaluation/latency.py
 	AGENT_MODE=rules AUDIT_LOG_PATH=off python evaluation/prompt_regression.py
+	AGENT_MODE=rules AUDIT_LOG_PATH=off python evaluation/claims_regression.py
 
 hygiene:
 	python scripts/static_phi_hygiene.py
@@ -45,6 +46,7 @@ validate-harness:
 	python scripts/validate_harness.py
 	@if [ -f ../semantic-runtimes/cli/bin/harness.js ]; then \
 		node ../semantic-runtimes/cli/bin/harness.js validate harness/harness.jsonld; \
+		node ../semantic-runtimes/cli/bin/harness.js validate harness/examples/claims-assistant.jsonld; \
 	else \
 		echo "note: sibling semantic-runtimes not found — structural validate only"; \
 	fi

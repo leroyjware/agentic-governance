@@ -8,7 +8,7 @@
 
 > *Most teams can build a LangGraph agent. Few can prove it's production-ready.*
 
-**Whitepaper:** [docs/WHITEPAPER.md](docs/WHITEPAPER.md) · **Local demo:** [docs/LOCAL.md](docs/LOCAL.md) · **Plan:** [PLAN.md](PLAN.md) · **Audit:** [AUDIT.md](AUDIT.md)
+**Whitepaper:** [docs/WHITEPAPER.md](docs/WHITEPAPER.md) · **Local demo:** [docs/LOCAL.md](docs/LOCAL.md) · **Second vertical:** [docs/SECOND-VERTICAL.md](docs/SECOND-VERTICAL.md) · **Plan:** [PLAN.md](PLAN.md)
 
 This is **not** a chatbot demo. It is an open-source reference showing how to **operationalize** agentic AI with governance, evaluation, and CI discipline.
 
@@ -20,15 +20,16 @@ This is **not** a chatbot demo. It is an open-source reference showing how to **
 
 | Question | Answer in this repo |
 |----------|---------------------|
-| How do we gate AI deployments? | CI runs unit tests + PHI / hallucination / grounding / latency + harness validate |
+| How do we gate AI deployments? | CI: tests + prompt/PHI/hallucination/grounding/latency + claims regression + harness validate |
 | How do we prevent PHI leakage? | Auth **before** retrieval → scoped tools → output guardrails → audit |
-| How do we know the rules path didn't regress? | Prompt regression + PHI / grounding / hallucination / latency on every push |
-| How do we run real multi-agent inference? | LangGraph: authorize → route → plan → evaluate (replan×1) → finalize |
+| How do we know the rules path didn't regress? | Prompt regression (`golden.jsonl`) on every push |
+| How do we run real multi-agent inference? | LangGraph healthcare: authorize → route → plan → evaluate (replan×1) → finalize |
+| How do we reuse the envelope? | Claims second vertical — same pattern, different harness ([SECOND-VERTICAL.md](docs/SECOND-VERTICAL.md)) |
 | How do we see governance live? | Control plane at `/ui` + `make showcase` |
-| How do we describe the architecture? | [Semantic Harness](harness/harness.jsonld) — agents, tools, policy, invariants |
-| How do we monitor? | Prometheus `/metrics` (Grafana is Planned — see [PLAN.md](PLAN.md)) |
+| How do we describe the architecture? | Semantic Harness JSON-LD — agents, tools, policy, invariants |
+| How do we monitor? | Prometheus `/metrics` + importable Grafana JSON |
 
-**Known limitations** (by design for v0.4): in-memory synthetic store (not pgvector); demo identity via `X-User-Scope` / body scope (not JWT); eval gates exercise the **rules** planner — live LangGraph is optional CI + local `make live`. Details: [AUDIT.md](AUDIT.md).
+**Known limitations** (v0.5): in-memory synthetic store (not pgvector); demo identity via `X-User-Scope` (not JWT); claims vertical is rules-path (healthcare is the LangGraph flagship); live LangGraph optional in CI.
 
 ---
 
@@ -41,10 +42,8 @@ Commit
   → Static synthetic-PHI hygiene
   → Unit + API tests
   → Prompt regression (golden.jsonl)
-  → Grounding evaluation
-  → Hallucination tests
-  → PHI leakage tests
-  → Latency benchmark (rules path)
+  → Grounding / hallucination / PHI / latency
+  → Claims vertical regression
   → (optional) Live LangGraph cases if GROQ_API_KEY secret set
 ```
 
@@ -162,8 +161,10 @@ Add agents: [docs/ADD-AN-AGENT.md](docs/ADD-AN-AGENT.md).
 | Harness loader + `sh:Policy` | **Shipped** |
 | Rules planner + eval gates (PHI 14 / hall / ground / latency) | **Shipped** |
 | Control plane UI (`/ui`) + `make showcase` | **Shipped** |
+| Claims second vertical + Grafana dashboard JSON | **Shipped** |
 | CI matching the diagram above | **Shipped** |
-| Grafana / pgvector / JWT / prompt-regression gate | **Deferred** — [PLAN.md](PLAN.md) |
+| Flagship complete (v0.5) | **Yes** — [PLAN.md](PLAN.md) |
+| pgvector / JWT / claims LangGraph | **Deferred** — [PLAN.md](PLAN.md) |
 
 ---
 

@@ -37,6 +37,7 @@ flowchart TD
 | Hallucination | `python evaluation/hallucination.py` | Refusal when no context |
 | PHI leakage | `python evaluation/phi.py` | All scenarios match expect_blocked |
 | Latency | `python evaluation/latency.py` | Rules-path p95 under budget |
+| Claims vertical | `python evaluation/claims_regression.py` | Second vertical envelope holds |
 | Live LangGraph | `python scripts/live_graph_cases.py` | Optional — needs repo secret |
 
 Eval gates use **`AGENT_MODE=rules`** (deterministic, no LLM spend). Live job exercises the real LangGraph workflow.

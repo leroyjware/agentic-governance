@@ -1,0 +1,85 @@
+{
+  "@context": "https://semantic-harness.org/schema/context.jsonld",
+  "@graph": [
+    {
+      "@id": "urn:uuid:clag0001-0001-4000-8000-000000000001",
+      "@type": "sh:Harness",
+      "sh:name": "Claims Status Assistant",
+      "sh:description": "Second vertical — same governance envelope, different domain. Rules-path + harness declaration; healthcare remains the LangGraph flagship.",
+      "sh:specVersion": "0.1",
+      "sh:agents": ["urn:uuid:clag0002-0002-4000-8000-000000000002"],
+      "sh:workflows": ["urn:uuid:clag0010-0010-4000-8000-000000000010"],
+      "sh:skills": ["urn:uuid:clag0020-0020-4000-8000-000000000020"],
+      "sh:tools": ["urn:uuid:clag0030-0030-4000-8000-000000000030"],
+      "sh:policies": ["urn:uuid:clag0041-0041-4000-8000-000000000041"],
+      "sh:metrics": ["urn:uuid:clag0052-0052-4000-8000-000000000052"],
+      "sh:invariants": ["urn:uuid:clag0060-0060-4000-8000-000000000060"]
+    },
+    {
+      "@id": "urn:uuid:clag0002-0002-4000-8000-000000000002",
+      "@type": "sh:Agent",
+      "sh:name": "Claims Specialist",
+      "sh:description": "Answers synthetic claim status questions within authorized member scope.",
+      "sh:systemRole": "You are a claims status assistant on synthetic data only. Use tools for claim facts. Cite claim ids. Refuse when context is missing. Never invent adjudication outcomes.",
+      "sh:model": "llama-3.3-70b-versatile",
+      "sh:temperature": 0.0,
+      "sh:maxTurns": 4,
+      "sh:hasSkill": ["urn:uuid:clag0020-0020-4000-8000-000000000020"],
+      "sh:hasTool": ["urn:uuid:clag0030-0030-4000-8000-000000000030"]
+    },
+    {
+      "@id": "urn:uuid:clag0010-0010-4000-8000-000000000010",
+      "@type": "sh:Workflow",
+      "sh:name": "claims-status-flow",
+      "sh:description": "authorize → plan (scoped claim retrieve) → guardrails.",
+      "sh:steps": [
+        {
+          "sh:stepId": "authorize",
+          "sh:stepKind": "function"
+        },
+        {
+          "sh:stepId": "plan",
+          "sh:stepKind": "agent",
+          "sh:agentRef": "urn:uuid:clag0002-0002-4000-8000-000000000002"
+        }
+      ]
+    },
+    {
+      "@id": "urn:uuid:clag0020-0020-4000-8000-000000000020",
+      "@type": "sh:Skill",
+      "sh:name": "claims-doctrine",
+      "sh:body": "1. Authorization before claim retrieval.\n2. Cite claim document ids.\n3. Refuse appeals/lawsuits with no context.\n4. Synthetic only — not a real payer system."
+    },
+    {
+      "@id": "urn:uuid:clag0030-0030-4000-8000-000000000030",
+      "@type": "sh:Tool",
+      "sh:name": "retrieve_claims",
+      "sh:protocol": "function",
+      "sh:description": "Scoped synthetic claim retrieval for the authorized member."
+    },
+    {
+      "@id": "urn:uuid:clag0041-0041-4000-8000-000000000041",
+      "@type": "sh:Policy",
+      "sh:name": "claims-tool-policy",
+      "sh:policyKind": "tool",
+      "sh:autonomyTier": "L1",
+      "sh:allowlist": ["urn:uuid:clag0030-0030-4000-8000-000000000030"]
+    },
+    {
+      "@id": "urn:uuid:clag0052-0052-4000-8000-000000000052",
+      "@type": "sh:Metric",
+      "sh:name": "claims-phi-block-rate",
+      "sh:description": "Cross-member claim access correctly blocked.",
+      "sh:probe": {
+        "sh:command": "cd . && PYTHONPATH=. python evaluation/claims_regression.py --json"
+      }
+    },
+    {
+      "@id": "urn:uuid:clag0060-0060-4000-8000-000000000060",
+      "@type": "sh:Invariant",
+      "sh:name": "no-cross-member-claims",
+      "sh:severity": "blocking",
+      "sh:description": "Member A cannot retrieve Member B claim documents."
+    }
+  ]
+}

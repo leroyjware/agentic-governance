@@ -52,6 +52,9 @@ jobs:
       - name: Prompt regression gate
         run: python evaluation/prompt_regression.py
 
+      - name: Claims vertical regression
+        run: python evaluation/claims_regression.py
+
       - name: Import LangGraph stack
         run: python -c "from agent.graph import graph_available; assert graph_available()"
 

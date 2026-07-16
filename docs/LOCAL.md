@@ -90,3 +90,14 @@ See [ADD-AN-AGENT.md](./ADD-AN-AGENT.md).
 | Alice → John’s MRI | **blocked at authorize** |
 | Alice → surgery date | `status=refused` |
 | John → my MRI | grounded imaging answer |
+
+## Second vertical (claims)
+
+```bash
+# or use /ui → Assistant: claims
+curl -s -X POST http://localhost:8080/chat \
+  -H 'X-User-Scope: member:alice' -H 'Content-Type: application/json' \
+  -d '{"assistant":"claims","mode":"rules","message":"What is the status of my claims?"}'
+```
+
+See [SECOND-VERTICAL.md](./SECOND-VERTICAL.md).

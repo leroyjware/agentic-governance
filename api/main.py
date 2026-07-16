@@ -17,15 +17,15 @@ from agent.runtime import handle_chat, resolve_mode, use_langgraph
 from governance import audit
 from observability import metrics
 
-APP_VERSION = "0.4.0"
+APP_VERSION = "0.5.0"
 UI_DIR = Path(__file__).resolve().parents[1] / "ui"
 
 app = FastAPI(
     title="Agentic Governance",
     description=(
-        "Healthcare appointment assistant — synthetic data, real governance. "
-        "Control plane at /ui. LangGraph when GROQ_API_KEY/OPENAI_API_KEY set; "
-        "rules planner for CI. Identity: X-User-Scope; AUTH_STRICT=1 to require it."
+        "Governed assistants on synthetic data. Healthcare (LangGraph flagship) + "
+        "Claims (second vertical). Control plane at /ui. "
+        "Identity: X-User-Scope; AUTH_STRICT=1 to require it."
     ),
     version=APP_VERSION,
 )
@@ -35,11 +35,15 @@ class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1)
     user_scope: str | None = Field(
         default=None,
-        description="e.g. patient:alice — ignored when X-User-Scope is set; required if header absent",
+        description="e.g. patient:alice or member:alice — ignored when X-User-Scope is set",
     )
     mode: Literal["auto", "graph", "rules"] | None = Field(
         default=None,
-        description="auto (default) | graph (require LLM) | rules (CI deterministic)",
+        description="auto | graph (healthcare+LLM) | rules",
+    )
+    assistant: Literal["healthcare", "claims"] = Field(
+        default="healthcare",
+        description="healthcare (flagship) | claims (second vertical, rules)",
     )
 
 
@@ -55,18 +59,13 @@ class ChatResponse(BaseModel):
     retry_count: int | None = None
     trace: list[dict] | None = None
     user_scope: str | None = None
+    assistant: str | None = None
 
 
 def resolve_user_scope(
     body_scope: str | None,
     header_scope: str | None,
 ) -> str:
-    """Resolve caller identity.
-
-    - If X-User-Scope is present, it wins (body cannot escalate).
-    - If AUTH_STRICT=1, header is required and body must match when provided.
-    - Otherwise body user_scope is accepted for local demos.
-    """
     strict = os.getenv("AUTH_STRICT", "0").strip() == "1"
     header = (header_scope or "").strip() or None
     body = (body_scope or "").strip() or None
@@ -105,6 +104,7 @@ def health() -> dict:
         "llm_configured": llm_configured(),
         "langgraph_active": active,
         "auth_strict": os.getenv("AUTH_STRICT", "0") == "1",
+        "assistants": ["healthcare", "claims"],
         "version": APP_VERSION,
     }
 
@@ -127,7 +127,7 @@ def chat(
     if mode is None and os.getenv("AGENT_MODE"):
         mode = resolve_mode()  # type: ignore[assignment]
 
-    result = handle_chat(user_scope, req.message, mode=mode)
+    result = handle_chat(user_scope, req.message, mode=mode, assistant=req.assistant)
 
     if result.get("blocked"):
         metrics.record_phi_block()
@@ -152,6 +152,7 @@ def chat(
         retry_count=result.get("retry_count"),
         trace=result.get("trace"),
         user_scope=user_scope,
+        assistant=result.get("assistant") or req.assistant,
     )
 
 

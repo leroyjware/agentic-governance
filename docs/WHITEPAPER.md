@@ -249,16 +249,17 @@ make eval
 # Unit + API tests
 make test
 
-# Local API
+# Local API + control plane
 make run
-# → http://localhost:8080/docs
+# → http://localhost:8080/ui
 ```
 
-Try the three canonical scenarios:
+Canonical scenarios:
 
 1. Authorized appointment query → grounded answer with citations  
 2. Cross-patient MRI request → access denied  
 3. Surgery date with no context → refusal  
+4. Claims vertical — cross-member claim access denied (same envelope)
 
 ---
 
@@ -266,14 +267,15 @@ Try the three canonical scenarios:
 
 | Mode | Engine | Purpose |
 |------|--------|---------|
-| `graph` / `auto` + API key | **LangGraph** multi-agent: Router → Planner → Evaluator | Realistic inference demos |
+| `graph` / `auto` + API key | **LangGraph** multi-agent (healthcare) | Realistic inference demos |
 | `rules` / CI | Deterministic planner | Quality gates without LLM spend |
+| `assistant=claims` | Claims rules planner | Second vertical — envelope reuse |
 
-Unauthorized requests are denied **before** either engine runs. The Semantic Harness declares agents, tools, policy, and invariants; LangGraph executes a compatible graph; evaluation gates prove trust on the rules path (live graph via optional CI / `make live`). See [LOCAL.md](./LOCAL.md) and [PLAN.md](../PLAN.md).
+Unauthorized requests are denied **before** either engine runs. See [LOCAL.md](./LOCAL.md), [SECOND-VERTICAL.md](./SECOND-VERTICAL.md), [PLAN.md](../PLAN.md) (**flagship complete**).
 
 ## Roadmap
 
-Living tracker: **[PLAN.md](../PLAN.md)** (shipped vs next). No dead phase checklists.
+**Flagship is complete (v0.5).** Living tracker: **[PLAN.md](../PLAN.md)** — only post-flagship deferred items remain.
 
 The orchestrator can evolve. The governance envelope should not have to be reinvented.
 
@@ -291,7 +293,7 @@ Agentic Governance is a reference for that discipline: an Enterprise Agentic AI 
 ---
 
 **Author:** Leroy Ware  
-**Repository:** https://github.com/leroyjware/agentic-governance *(private during review)*  
+**Repository:** https://github.com/leroyjware/agentic-governance  
 **Related work:** [Semantic Harness](https://semantic-harness.org) — open standard for declaring intelligent systems as portable graphs  
 **License:** Apache 2.0  
 

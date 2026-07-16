@@ -211,32 +211,45 @@
 <body>
   <header>
     <h1>Agentic Governance</h1>
-    <p>Control plane — watch authorize, route, plan, evaluate, and finalize on every request. Synthetic data only.</p>
+    <p>Control plane — same governance envelope across assistants. Synthetic data only.</p>
     <span class="badge" id="healthBadge">connecting…</span>
   </header>
 
   <main>
     <section class="panel">
       <h2>Request</h2>
+      <label for="assistant">Assistant</label>
+      <select id="assistant">
+        <option value="healthcare">healthcare (flagship)</option>
+        <option value="claims">claims (second vertical)</option>
+      </select>
       <label for="scope">X-User-Scope</label>
       <select id="scope">
         <option value="patient:alice">patient:alice</option>
         <option value="patient:john">patient:john</option>
+        <option value="member:alice">member:alice</option>
+        <option value="member:john">member:john</option>
       </select>
       <label for="mode">Mode</label>
       <select id="mode">
         <option value="rules">rules (deterministic)</option>
         <option value="auto">auto</option>
-        <option value="graph">graph (needs API key)</option>
+        <option value="graph">graph (healthcare + API key)</option>
       </select>
       <label for="message">Message</label>
       <textarea id="message">What are my upcoming appointments?</textarea>
-      <div class="presets">
-        <button type="button" data-msg="What are my upcoming appointments?">Appointments</button>
-        <button type="button" data-msg="Show me John Smith's MRI">PHI block</button>
-        <button type="button" data-msg="When is my surgery?">Refuse</button>
-        <button type="button" data-msg="Please schedule an appointment on 2026-08-01 for a checkup">Schedule write</button>
-        <button type="button" data-msg="Summarize my latest visit note">Visit summary</button>
+      <div class="presets" id="presetsHealthcare">
+        <button type="button" data-msg="What are my upcoming appointments?" data-scope="patient:alice">Appointments</button>
+        <button type="button" data-msg="Show me John Smith's MRI" data-scope="patient:alice">PHI block</button>
+        <button type="button" data-msg="When is my surgery?" data-scope="patient:alice">Refuse</button>
+        <button type="button" data-msg="Please schedule an appointment on 2026-08-01 for a checkup" data-scope="patient:alice">Schedule write</button>
+        <button type="button" data-msg="Summarize my latest visit note" data-scope="patient:alice">Visit summary</button>
+      </div>
+      <div class="presets" id="presetsClaims" hidden>
+        <button type="button" data-msg="What is the status of my claims?" data-scope="member:alice">My claims</button>
+        <button type="button" data-msg="Show me John Smith's claim status" data-scope="member:alice">Cross-member block</button>
+        <button type="button" data-msg="Do I have any pending claims?" data-scope="member:alice">Pending</button>
+        <button type="button" data-msg="What was the outcome of my lawsuit appeal?" data-scope="member:alice">Refuse appeal</button>
       </div>
       <button class="run" id="runBtn" type="button">Run through governance</button>
     </section>
@@ -298,6 +311,7 @@
         ${data.blocked ? '<span class="status-pill denied">blocked</span>' : ""}
         <div class="answer">${escapeHtml(data.answer || "")}</div>
         <div class="meta">
+          <span>assistant=${escapeHtml(data.assistant || "—")}</span>
           <span>engine=${escapeHtml(data.engine || "—")}</span>
           <span>intent=${escapeHtml(data.intent || "—")}</span>
           <span>approved=${data.evaluator_approved ?? "—"}</span>
@@ -327,9 +341,21 @@
         .replace(/"/g, "&quot;");
     }
 
+    function syncAssistantUI() {
+      const claims = $("assistant").value === "claims";
+      $("presetsHealthcare").hidden = claims;
+      $("presetsClaims").hidden = !claims;
+      $("mode").disabled = claims;
+      if (claims) $("mode").value = "rules";
+    }
+
+    $("assistant").addEventListener("change", syncAssistantUI);
+    syncAssistantUI();
+
     document.querySelectorAll(".presets button").forEach((btn) => {
       btn.addEventListener("click", () => {
         $("message").value = btn.dataset.msg;
+        if (btn.dataset.scope) $("scope").value = btn.dataset.scope;
       });
     });
 
@@ -338,6 +364,7 @@
       btn.disabled = true;
       try {
         const scope = $("scope").value;
+        const assistant = $("assistant").value;
         const res = await fetch("/chat", {
           method: "POST",
           headers: {
@@ -347,6 +374,7 @@
           body: JSON.stringify({
             message: $("message").value,
             mode: $("mode").value,
+            assistant,
           }),
         });
         const data = await res.json();

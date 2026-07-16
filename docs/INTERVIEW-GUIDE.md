@@ -45,12 +45,13 @@ Key phrase: *"The model can't leak what it never received."*
 
 | Capability | LangSmith traces | This repo |
 |------------|------------------|-----------|
-| Trace debugging | Yes | Yes (OpenTelemetry) |
+| Trace debugging | Yes | Workflow `trace` + audit log |
 | CI gate on PHI | No | Yes — pipeline fails |
 | Harness declaration | No | Yes — portable graph |
 | Auth before RAG | DIY | Reference pattern |
-| Prometheus enterprise metrics | DIY | Built-in dashboards |
-| Prompt regression in PR | DIY | Standard gate |
+| Prometheus metrics | DIY | `/metrics` + Grafana JSON |
+| Prompt regression in CI | DIY | `golden.jsonl` gate |
+| Second vertical reuse | DIY | Claims assistant (same envelope) |
 
 LangGraph is the orchestrator. **Governance is the product.**
 
@@ -67,11 +68,11 @@ Analog: OpenAPI spec vs API gateway with WAF, rate limits, and audit.
 
 ## Demo flow (5 minutes)
 
-1. Show README CI diagram — "this is what architects want"
-2. Open `harness/harness.jsonld` — invariants with probes
-3. Run PHI eval (or show report) — unauthorized access blocked
-4. Show runtime middleware chain diagram
-5. Show Grafana dashboard (Phase 3) — governance metrics
+1. README CI diagram — gates that actually run
+2. `make showcase` or `/ui` — PHI block + grounded answer + schedule write tier
+3. Switch assistant to **claims** — cross-member block (envelope reuse)
+4. Open `harness/harness.jsonld` + `harness/examples/claims-assistant.jsonld`
+5. Point at Grafana JSON under `observability/grafana/` (import when scraping `/metrics`)
 
 ---
 

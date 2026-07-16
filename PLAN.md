@@ -1,9 +1,24 @@
 # Plan — living roadmap
 
 **Single source of planning truth for this repo.**  
-Past audits: [AUDIT.md](AUDIT.md). When work ships: move it to **Shipped**, clear **Now**, update README if claims change.
+Past audits: [AUDIT.md](AUDIT.md).
 
 **Principle:** Prefer honest docs over unfinished features. Governance is the product; LangGraph is an implementation detail.
+
+---
+
+## Status: Flagship complete (v0.5)
+
+Definition of done met:
+
+1. Healthcare multi-agent path (LangGraph + harness + tiers + replan)
+2. Deterministic CI matches the README diagram (incl. prompt regression)
+3. Control plane UI + `make showcase`
+4. Second vertical (claims) — harness + rules + CI gate
+5. Grafana dashboard JSON for `/metrics`
+6. Docs aligned; dead `docs/LANGGRAPH-PLAN.md` removed
+
+**Now is empty.** Further work is post-flagship (Deferred only).
 
 ---
 
@@ -11,9 +26,9 @@ Past audits: [AUDIT.md](AUDIT.md). When work ships: move it to **Shipped**, clea
 
 | Keep | Do not keep |
 |------|-------------|
-| `PLAN.md` — shipped + now + deferred | Dead phase checkboxes |
-| `AUDIT.md` — dated findings + remediation | Duplicate roadmaps in subsystem READMEs |
-| Spec docs that match code | “Phase N will add…” stubs |
+| `PLAN.md` — shipped + deferred | Dead phase checklists |
+| `AUDIT.md` — dated findings | Duplicate roadmaps |
+| Spec docs that match code | Superseded plan docs |
 
 ---
 
@@ -21,49 +36,41 @@ Past audits: [AUDIT.md](AUDIT.md). When work ships: move it to **Shipped**, clea
 
 | Capability | Where |
 |------------|--------|
-| Dual-mode runtime (`rules` / `graph` / `auto`) | `agent/runtime.py` |
-| Multi-agent LangGraph + intent tool tiers + evaluator replan×1 | `agent/workflow.py`, `governance/tool_tiers.py` |
-| Rules planner (schedule write tier parity) | `agent/planner.py` |
-| Semantic Harness + loader (`sh:Policy`, prompts, tools) | `harness/`, `agent/harness_loader.py` |
-| Auth-before-retrieval + scoped tools + guardrails + audit JSONL | `governance/` |
-| Eval gates + hygiene + harness validate in CI | `evaluation/`, `.github/workflows/` |
-| FastAPI + Prometheus + `X-User-Scope` / `AUTH_STRICT` | `api/` |
-| Control plane UI | `/ui` (`ui/index.html`) |
-| Narrative showcase | `make showcase` → `scripts/showcase.py` |
-| Prompt regression gate (`golden.jsonl`) | `evaluation/prompt_regression.py` |
-| Synthetic patients (Alice, John) — in-memory retrieval | `knowledge/` |
-| Credibility waves 1–3 | 2026-07-15 |
-| Next-1 hard path + Next-2 control plane | 2026-07-15 |
+| Dual-mode runtime | `agent/runtime.py` |
+| Healthcare LangGraph + tool tiers + replan×1 | `agent/workflow.py` |
+| Healthcare rules planner | `agent/planner.py` |
+| Claims second vertical (rules + harness) | `agent/claims_planner.py`, `harness/examples/` |
+| Semantic Harness + `sh:Policy` | `harness/` |
+| Auth / guardrails / audit JSONL | `governance/` |
+| Eval gates + prompt + claims regression + CI | `evaluation/`, `.github/workflows/` |
+| FastAPI + Prometheus + identity header | `api/` |
+| Control plane UI + showcase | `/ui`, `make showcase` |
+| Grafana dashboard JSON | `observability/grafana/` |
 
-Local: [docs/LOCAL.md](docs/LOCAL.md).
+Local: [docs/LOCAL.md](docs/LOCAL.md). Second vertical: [docs/SECOND-VERTICAL.md](docs/SECOND-VERTICAL.md).
 
 ---
 
 ## Now
 
-_No active wave._ Next increments only if they strengthen the governance thesis.
-
-Suggested later (not started):
-
-- Optional Grafana JSON dashboard (visual polish on existing `/metrics`)
-- One second vertical as a second harness file (“same CI, different agent”)
-- Token-cost gate once live metering exists
+_Empty — flagship complete._
 
 ---
 
-## Deferred (do not advertise as shipped)
+## Deferred (post-flagship)
 
 | Item | Why deferred |
 |------|----------------|
-| Example gallery / many verticals | Dilutes the flagship hard path |
-| Large multi-swarm mesh | Branching + tiers already prove complexity |
-| Grafana + compose | Metrics exist; dashboards are polish |
-| pgvector / Postgres RAG | Keyword store enough for governance story |
+| Claims LangGraph (full multi-agent) | Rules + harness already prove reuse |
+| Example gallery / many verticals | One second vertical is enough |
+| Large multi-swarm mesh | Complexity shown via tiers + replan |
+| Grafana compose stack | JSON dashboard enough to import |
+| pgvector / Postgres RAG | Keyword store enough |
 | Full JWT / OIDC | `X-User-Scope` demonstrates the seam |
 | Token cost budget gate | Needs live token metering |
 | Dynamic compile from `sh:Workflow` | Edges stay explicit in Python |
 | `harness verify` in CI image | Needs sibling runtime packaging |
-| Human-in-the-loop approval product UI | Later |
+| Human-in-the-loop approval UI | Later |
 | 50-patient corpus | Expand when eval diversity demands it |
 
 ---
@@ -74,7 +81,7 @@ Suggested later (not started):
 |-------|--------|
 | Language | Python 3.12+ |
 | Install | `pip install -r requirements.txt` |
-| Agent | LangGraph (swappable) |
+| Agent | LangGraph (healthcare); rules for CI + claims |
 | LLM | Groq preferred, else OpenAI-compatible |
 | API | FastAPI |
 | UI | Static control plane at `/ui` |

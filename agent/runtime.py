@@ -2,8 +2,12 @@
 
 Modes:
   auto   — LangGraph workflow if API key present, else rules
-  graph  — require multi-agent LangGraph + API key
+  graph  — require multi-agent LangGraph + API key (healthcare only)
   rules  — deterministic planner (CI / eval gates)
+
+Assistants:
+  healthcare — flagship (rules or LangGraph)
+  claims     — second vertical (rules + harness; proves envelope reuse)
 """
 
 from __future__ import annotations
@@ -11,11 +15,13 @@ from __future__ import annotations
 import os
 from typing import Any, Literal
 
+from agent.claims_planner import run_claims_planner
 from agent.graph import graph_available, run_langgraph_agent
 from agent.llm import llm_configured
 from agent.planner import run_planner
 
 Mode = Literal["auto", "graph", "rules"]
+Assistant = Literal["healthcare", "claims"]
 
 
 def resolve_mode(explicit: Mode | None = None) -> Mode:
@@ -43,18 +49,19 @@ def handle_chat(
     user_scope: str,
     message: str,
     mode: Mode | None = None,
+    assistant: Assistant = "healthcare",
 ) -> dict[str, Any]:
-    """
-    Full request path.
+    """Full request path for the selected assistant."""
+    if assistant == "claims":
+        # Claims vertical is rules + harness today (honest scope).
+        result = run_claims_planner(user_scope, message)
+        return {**result, "assistant": "claims"}
 
-    LangGraph workflow already includes authorize → route → plan → evaluate →
-    guardrails. Rules path uses planner.run_planner (also authorizes).
-    """
     resolved = resolve_mode(mode)
 
     if use_langgraph(resolved):
-        return run_langgraph_agent(user_scope, message)
+        result = run_langgraph_agent(user_scope, message)
+        return {**result, "assistant": "healthcare"}
 
-    # Fast deny for rules mode still goes through planner (includes auth)
     result = run_planner(user_scope, message)
-    return {**result, "engine": result.get("engine") or "rules"}
+    return {**result, "engine": result.get("engine") or "rules", "assistant": "healthcare"}

@@ -14,6 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from agent.claims_planner import run_claims_planner
 from agent.llm import llm_configured
 from agent.planner import run_planner
 from agent.runtime import handle_chat
@@ -54,8 +55,8 @@ def main() -> int:
 
     _banner("Agentic Governance — showcase (same envelope, harder path)")
     print(
-        "Story: PHI blocked before LLM → grounded read → ungrounded refuse → "
-        "schedule write tier → (optional) live graph replan path."
+        "Story: PHI blocked → grounded read → refuse → schedule write tier → "
+        "claims vertical reuse → (optional) live graph."
     )
 
     # 1) PHI — authorize wall
@@ -81,22 +82,30 @@ def main() -> int:
     _show("4. Schedule intent → write tool allowed", r4)
     assert r4.get("write_tools") is True and r4["blocked"] is False
 
-    # 5) Live graph if key present
+    # 5) Second vertical
+    r5 = run_claims_planner("member:alice", "Show me John Smith's claim status")
+    _show("5. Claims vertical — cross-member blocked (envelope reuse)", r5)
+    assert r5["blocked"] is True
+    r5b = run_claims_planner("member:alice", "What is the status of my claims?")
+    _show("5b. Claims vertical — authorized citations", r5b)
+    assert r5b["blocked"] is False and r5b["citations"]
+
+    # 6) Live graph if key present
     if llm_configured():
-        r5 = handle_chat(
+        r6 = handle_chat(
             "patient:alice",
             "What are my upcoming appointments?",
             mode="graph",
         )
-        _show("5. Live LangGraph (route→plan→evaluate→finalize)", r5)
+        _show("6. Live LangGraph (route→plan→evaluate→finalize)", r6)
         print("\n  Trace detail:")
-        for step in r5.get("trace") or []:
+        for step in r6.get("trace") or []:
             print(f"    • {step.get('step')}: { {k:v for k,v in step.items() if k != 'step'} }")
     else:
-        print("\n--- 5. Live LangGraph ---")
-        print("skipped (set GROQ_API_KEY to exercise route→plan→evaluate→replan)")
+        print("\n--- 6. Live LangGraph ---")
+        print("skipped (set GROQ_API_KEY for live graph)")
 
-    _banner("Envelope held. Governance is the product.")
+    _banner("Envelope held across verticals. Governance is the product.")
     print("Next: make run → open http://localhost:8080/ui")
     return 0
 
