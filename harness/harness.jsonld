@@ -5,7 +5,7 @@
       "@id": "urn:uuid:hcag0001-0001-4000-8000-000000000001",
       "@type": "sh:Harness",
       "sh:name": "Healthcare Appointment Assistant",
-      "sh:description": "Multi-agent synthetic healthcare assistant: authorize → route → plan (tools) → evaluate (maker-checker). Semantic Harness declares; LangGraph executes; governance gates prove trust.",
+      "sh:description": "Multi-agent synthetic healthcare assistant: authorize → route → plan (intent-scoped tool tiers) → evaluate (maker-checker, one replan) → finalize. Semantic Harness declares; LangGraph executes; governance gates prove trust.",
       "sh:specVersion": "0.1",
       "sh:agents": [
         "urn:uuid:hcag0004-0004-4000-8000-000000000004",
@@ -84,7 +84,7 @@
       "@id": "urn:uuid:hcag0010-0010-4000-8000-000000000010",
       "@type": "sh:Workflow",
       "sh:name": "appointment-assistant-flow",
-      "sh:description": "authorize → route → plan → evaluate (conditional reject).",
+      "sh:description": "authorize → route → plan → evaluate; on reject replan once then finalize. Write tools only when intent=schedule.",
       "sh:steps": [
         {
           "sh:stepId": "authorize",
@@ -118,7 +118,7 @@
       "@id": "urn:uuid:hcag0020-0020-4000-8000-000000000020",
       "@type": "sh:Skill",
       "sh:name": "healthcare-assistant-doctrine",
-      "sh:body": "1. Authorization before retrieval — never request records outside user scope.\n2. Cite every factual claim from retrieved documents.\n3. Refuse when context is insufficient.\n4. Synthetic data only — never claim real HIPAA compliance."
+      "sh:body": "1. Authorization before retrieval — never request records outside user scope.\n2. Cite every factual claim from retrieved documents.\n3. Refuse when context is insufficient.\n4. schedule_appointment is a write tool — only available when intent is schedule.\n5. Synthetic data only — never claim real HIPAA compliance."
     },
     {
       "@id": "urn:uuid:hcag0021-0021-4000-8000-000000000021",

@@ -1,4 +1,4 @@
-.PHONY: help install test eval gate run smoke demo live lint validate-harness hygiene
+.PHONY: help install test eval gate run smoke demo live showcase lint validate-harness hygiene
 
 export PYTHONPATH := .
 export AGENT_MODE ?= rules
@@ -12,8 +12,9 @@ help:
 	@echo "  make validate-harness   structural (+ sibling CLI if present)"
 	@echo "  make lint               ruff if available, else compileall"
 	@echo "  make gate               test + eval + hygiene + validate-harness + lint"
-	@echo "  make run                API on :8080"
-	@echo "  make demo|live|smoke    LangGraph showcase (needs GROQ_API_KEY)"
+	@echo "  make run                API on :8080 — open /ui control plane"
+	@echo "  make showcase           narrative hard-path demo (rules + optional graph)"
+	@echo "  make demo|live|smoke    LangGraph scripts (needs GROQ_API_KEY)"
 	@echo "  See docs/LOCAL.md and PLAN.md"
 
 install:
@@ -60,3 +61,6 @@ live:
 
 smoke:
 	python scripts/smoke_langgraph.py
+
+showcase:
+	python scripts/showcase.py

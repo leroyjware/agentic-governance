@@ -17,6 +17,12 @@ def test_health():
     assert "agent_mode" in data
 
 
+def test_control_plane_ui():
+    r = client.get("/ui/")
+    assert r.status_code == 200
+    assert "Control plane" in r.text or "Agentic Governance" in r.text
+
+
 def test_phi_blocked():
     r = client.post(
         "/chat",

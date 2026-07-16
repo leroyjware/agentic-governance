@@ -23,11 +23,12 @@ This is **not** a chatbot demo. It is an open-source reference showing how to **
 | How do we gate AI deployments? | CI runs unit tests + PHI / hallucination / grounding / latency + harness validate |
 | How do we prevent PHI leakage? | Auth **before** retrieval → scoped tools → output guardrails → audit |
 | How do we know the rules path didn't regress? | Deterministic eval suites on every PR (`AGENT_MODE=rules`) |
-| How do we run real multi-agent inference? | LangGraph: authorize → route → plan → evaluate ([LOCAL.md](docs/LOCAL.md)) |
+| How do we run real multi-agent inference? | LangGraph: authorize → route → plan → evaluate (replan×1) → finalize |
+| How do we see governance live? | Control plane at `/ui` + `make showcase` |
 | How do we describe the architecture? | [Semantic Harness](harness/harness.jsonld) — agents, tools, policy, invariants |
 | How do we monitor? | Prometheus `/metrics` (Grafana is Planned — see [PLAN.md](PLAN.md)) |
 
-**Known limitations** (by design for v0.3): in-memory synthetic store (not pgvector); demo identity via `X-User-Scope` / body scope (not JWT); eval gates exercise the **rules** planner — live LangGraph is optional CI + local `make live`. Details: [AUDIT.md](AUDIT.md).
+**Known limitations** (by design for v0.4): in-memory synthetic store (not pgvector); demo identity via `X-User-Scope` / body scope (not JWT); eval gates exercise the **rules** planner — live LangGraph is optional CI + local `make live`. Details: [AUDIT.md](AUDIT.md).
 
 ---
 
@@ -69,8 +70,8 @@ Commit
 Request (+ optional X-User-Scope)
   → Identity resolve (AUTH_STRICT optional)
   → Authorization (before any retrieval / LLM)
-  → Route → Plan (scoped tools) → Evaluate   [graph mode]
-  →   or rules planner                         [CI mode]
+  → Route → Plan (intent tool tiers) → Evaluate (replan×1)  [graph]
+  →   or rules planner                                      [CI]
   → Output guardrails
   → Audit (memory + optional JSONL)
   → Response (+ trace in graph mode)
@@ -121,7 +122,8 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
 make gate          # full deterministic suite
-make run           # http://localhost:8080/docs
+make showcase      # hard-path narrative (PHI → read → refuse → schedule write)
+make run           # http://localhost:8080/ui  (control plane)
 ```
 
 ```bash
@@ -141,6 +143,7 @@ curl -s -X POST http://localhost:8080/chat \
 
 ```bash
 export GROQ_API_KEY=...
+make showcase      # includes live graph step when key set
 make demo          # per-step trace
 make live          # curated cases
 ```
@@ -154,11 +157,12 @@ Add agents: [docs/ADD-AN-AGENT.md](docs/ADD-AN-AGENT.md).
 | Component | Status |
 |-----------|--------|
 | Auth-before-retrieval + scoped tools + guardrails + audit | **Shipped** |
-| Multi-agent LangGraph + harness loader + `sh:Policy` | **Shipped** |
+| Multi-agent LangGraph + tool tiers + evaluator replan | **Shipped** |
+| Harness loader + `sh:Policy` | **Shipped** |
 | Rules planner + eval gates (PHI 14 / hall / ground / latency) | **Shipped** |
+| Control plane UI (`/ui`) + `make showcase` | **Shipped** |
 | CI matching the diagram above | **Shipped** |
-| `X-User-Scope` + optional `AUTH_STRICT` | **Shipped** |
-| Grafana / pgvector / JWT / prompt-regression gate | **Planned** — [PLAN.md](PLAN.md) |
+| Grafana / pgvector / JWT / prompt-regression gate | **Deferred** — [PLAN.md](PLAN.md) |
 
 ---
 

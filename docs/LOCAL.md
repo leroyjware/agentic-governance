@@ -5,14 +5,17 @@
 A **Semantic Harness–aligned** workflow executed as LangGraph:
 
 ```
-authorize → route → plan (tools) → evaluate (maker-checker) → finalize (guardrails)
+authorize → route → plan (intent tool tiers) → evaluate ─┬→ finalize
+                                            ↑            │
+                                            └─ replan×1 ─┘
 ```
 
 | Layer | Source of truth |
 |-------|-----------------|
 | Agents, skills, tools, policy, invariants | `harness/harness.jsonld` |
 | Graph edges | `agent/workflow.py` (explicit; step IDs must match harness) |
-| Trust proof | `make gate` + `make live` |
+| Trust proof | `make gate` + `make showcase` / `make live` |
+| Visual | `make run` → http://localhost:8080/ui |
 
 ## Setup (once)
 
@@ -30,26 +33,26 @@ export GROQ_MODEL=llama-3.3-70b-versatile
 
 ```bash
 make gate          # test + eval + hygiene + harness validate + lint
+make showcase      # PHI → read → refuse → schedule write tier
 ```
 
 ## 2) Real multi-agent inference (Groq)
 
 ```bash
 export GROQ_API_KEY=...
+make showcase      # adds live graph step
 make demo          # per-step trace
 make live          # curated PHI / grounding / refusal / imaging
 ```
 
-Trace steps: authorize → route → plan → evaluate → finalize.
-
-## 3) API
+## 3) Control plane + API
 
 ```bash
-export GROQ_API_KEY=...
-# optional: export AUTH_STRICT=1
-# optional: export AUDIT_LOG_PATH=data/audit.jsonl
 make run
+# open http://localhost:8080/ui
 ```
+
+Presets in the UI: appointments, PHI block, refuse, schedule write, visit summary.
 
 ```bash
 curl -s -X POST http://localhost:8080/chat \

@@ -1,13 +1,15 @@
-"""FastAPI — governed chat API (rules or LangGraph)."""
+"""FastAPI — governed chat API + control-plane UI."""
 
 from __future__ import annotations
 
 import os
 import time
+from pathlib import Path
 from typing import Literal
 
 from fastapi import FastAPI, Header, HTTPException, Query
-from fastapi.responses import Response
+from fastapi.responses import RedirectResponse, Response
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from agent.llm import llm_configured
@@ -15,14 +17,15 @@ from agent.runtime import handle_chat, resolve_mode, use_langgraph
 from governance import audit
 from observability import metrics
 
-APP_VERSION = "0.3.0"
+APP_VERSION = "0.4.0"
+UI_DIR = Path(__file__).resolve().parents[1] / "ui"
 
 app = FastAPI(
     title="Agentic Governance",
     description=(
         "Healthcare appointment assistant — synthetic data, real governance. "
-        "LangGraph when GROQ_API_KEY/OPENAI_API_KEY set; rule-based planner for CI. "
-        "Identity: prefer X-User-Scope; set AUTH_STRICT=1 to require it."
+        "Control plane at /ui. LangGraph when GROQ_API_KEY/OPENAI_API_KEY set; "
+        "rules planner for CI. Identity: X-User-Scope; AUTH_STRICT=1 to require it."
     ),
     version=APP_VERSION,
 )
@@ -49,6 +52,7 @@ class ChatResponse(BaseModel):
     engine: str | None = None
     intent: str | None = None
     evaluator_approved: bool | None = None
+    retry_count: int | None = None
     trace: list[dict] | None = None
     user_scope: str | None = None
 
@@ -81,6 +85,11 @@ def resolve_user_scope(
     if body:
         return body
     raise HTTPException(status_code=400, detail="user_scope or X-User-Scope required")
+
+
+@app.get("/")
+def root() -> RedirectResponse:
+    return RedirectResponse(url="/ui/")
 
 
 @app.get("/health")
@@ -140,6 +149,7 @@ def chat(
         engine=result.get("engine"),
         intent=result.get("intent"),
         evaluator_approved=result.get("evaluator_approved"),
+        retry_count=result.get("retry_count"),
         trace=result.get("trace"),
         user_scope=user_scope,
     )
@@ -149,3 +159,7 @@ def chat(
 def audit_log(limit: int = Query(default=50, ge=1, le=500)) -> dict:
     events = audit.get_events()
     return {"events": events[-limit:], "count": len(events)}
+
+
+if UI_DIR.is_dir():
+    app.mount("/ui", StaticFiles(directory=str(UI_DIR), html=True), name="ui")

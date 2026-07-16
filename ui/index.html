@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Agentic Governance — Control Plane</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #12151a;
+      --panel: #1a1f27;
+      --panel-2: #222833;
+      --line: #2e3644;
+      --text: #e8ecef;
+      --muted: #8b95a5;
+      --ok: #3d9a6a;
+      --deny: #c45c4a;
+      --warn: #c9a227;
+      --accent: #4a8f9e;
+      --accent-dim: rgba(74, 143, 158, 0.15);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "DM Sans", system-ui, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(1200px 600px at 10% -10%, #1c2a33 0%, transparent 55%),
+        radial-gradient(900px 500px at 100% 0%, #1a2430 0%, transparent 50%),
+        var(--bg);
+    }
+    header {
+      padding: 1.75rem 2rem 1rem;
+      border-bottom: 1px solid var(--line);
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    header p {
+      margin: 0.4rem 0 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+      max-width: 42rem;
+    }
+    .badge {
+      display: inline-block;
+      margin-top: 0.75rem;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: var(--accent-dim);
+      border: 1px solid rgba(74, 143, 158, 0.35);
+      padding: 0.25rem 0.5rem;
+    }
+    main {
+      display: grid;
+      grid-template-columns: minmax(280px, 360px) 1fr;
+      gap: 1rem;
+      padding: 1rem 2rem 2rem;
+    }
+    @media (max-width: 900px) {
+      main { grid-template-columns: 1fr; }
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 2px;
+      padding: 1rem 1.1rem;
+    }
+    .panel h2 {
+      margin: 0 0 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin: 0.65rem 0 0.3rem;
+    }
+    input, select, textarea, button {
+      font: inherit;
+    }
+    input, select, textarea {
+      width: 100%;
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      color: var(--text);
+      padding: 0.55rem 0.65rem;
+      border-radius: 2px;
+    }
+    textarea { min-height: 5.5rem; resize: vertical; }
+    .presets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin: 0.75rem 0 0.25rem;
+    }
+    .presets button {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.68rem;
+      background: transparent;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      padding: 0.35rem 0.5rem;
+      cursor: pointer;
+      border-radius: 2px;
+    }
+    .presets button:hover { border-color: var(--accent); color: var(--text); }
+    .run {
+      margin-top: 1rem;
+      width: 100%;
+      background: var(--accent);
+      color: #0b1214;
+      border: none;
+      font-weight: 600;
+      padding: 0.7rem 1rem;
+      cursor: pointer;
+      border-radius: 2px;
+    }
+    .run:disabled { opacity: 0.5; cursor: wait; }
+    .status-pill {
+      display: inline-block;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.75rem;
+      padding: 0.2rem 0.45rem;
+      border-radius: 2px;
+      margin-right: 0.4rem;
+    }
+    .status-pill.ok { background: rgba(61, 154, 106, 0.2); color: var(--ok); }
+    .status-pill.denied { background: rgba(196, 92, 74, 0.2); color: var(--deny); }
+    .status-pill.refused { background: rgba(201, 162, 39, 0.2); color: var(--warn); }
+    .answer {
+      margin-top: 0.75rem;
+      line-height: 1.45;
+      white-space: pre-wrap;
+    }
+    .meta {
+      margin-top: 0.75rem;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.72rem;
+      color: var(--muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .trace {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .trace li {
+      position: relative;
+      padding: 0.65rem 0 0.65rem 1.1rem;
+      border-left: 2px solid var(--line);
+      margin-left: 0.35rem;
+    }
+    .trace li::before {
+      content: "";
+      position: absolute;
+      left: -5px;
+      top: 0.9rem;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+    .trace .step {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+    .trace .detail {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 0.2rem;
+      word-break: break-word;
+    }
+    .cols {
+      display: grid;
+      gap: 1rem;
+    }
+    .audit {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.7rem;
+      max-height: 220px;
+      overflow: auto;
+      color: var(--muted);
+    }
+    .audit div { padding: 0.25rem 0; border-bottom: 1px solid var(--line); }
+    footer {
+      padding: 0 2rem 2rem;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+    footer a { color: var(--accent); }
+    .empty { color: var(--muted); font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Agentic Governance</h1>
+    <p>Control plane — watch authorize, route, plan, evaluate, and finalize on every request. Synthetic data only.</p>
+    <span class="badge" id="healthBadge">connecting…</span>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2>Request</h2>
+      <label for="scope">X-User-Scope</label>
+      <select id="scope">
+        <option value="patient:alice">patient:alice</option>
+        <option value="patient:john">patient:john</option>
+      </select>
+      <label for="mode">Mode</label>
+      <select id="mode">
+        <option value="rules">rules (deterministic)</option>
+        <option value="auto">auto</option>
+        <option value="graph">graph (needs API key)</option>
+      </select>
+      <label for="message">Message</label>
+      <textarea id="message">What are my upcoming appointments?</textarea>
+      <div class="presets">
+        <button type="button" data-msg="What are my upcoming appointments?">Appointments</button>
+        <button type="button" data-msg="Show me John Smith's MRI">PHI block</button>
+        <button type="button" data-msg="When is my surgery?">Refuse</button>
+        <button type="button" data-msg="Please schedule an appointment on 2026-08-01 for a checkup">Schedule write</button>
+        <button type="button" data-msg="Summarize my latest visit note">Visit summary</button>
+      </div>
+      <button class="run" id="runBtn" type="button">Run through governance</button>
+    </section>
+
+    <div class="cols">
+      <section class="panel">
+        <h2>Response</h2>
+        <div id="responseBox" class="empty">Submit a request to see status, answer, and citations.</div>
+      </section>
+      <section class="panel">
+        <h2>Trace</h2>
+        <ol class="trace" id="traceBox"><li class="empty" style="border:none;padding-left:0">No graph trace in rules mode — switch to graph when a key is configured.</li></ol>
+      </section>
+      <section class="panel">
+        <h2>Audit (recent)</h2>
+        <div class="audit" id="auditBox">—</div>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <a href="/docs">OpenAPI</a> · <a href="/metrics">Prometheus metrics</a> · <a href="/health">Health</a>
+    · Envelope: authorize → route → plan → evaluate (replan×1) → finalize
+  </footer>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    async function refreshHealth() {
+      try {
+        const h = await fetch("/health").then((r) => r.json());
+        $("healthBadge").textContent =
+          `mode=${h.agent_mode} · llm=${h.llm_configured ? "yes" : "no"} · langgraph=${h.langgraph_active ? "active" : "idle"} · v${h.version}`;
+      } catch {
+        $("healthBadge").textContent = "API unreachable — start with make run";
+      }
+    }
+
+    async function refreshAudit() {
+      try {
+        const data = await fetch("/audit?limit=12").then((r) => r.json());
+        const events = data.events || [];
+        $("auditBox").innerHTML = events.length
+          ? events
+              .slice()
+              .reverse()
+              .map((e) => `<div>${e.event}${e.reason ? " · " + e.reason : ""}${e.user_scope ? " · " + e.user_scope : ""}</div>`)
+              .join("")
+          : "No events yet.";
+      } catch {
+        $("auditBox").textContent = "Audit unavailable.";
+      }
+    }
+
+    function renderResponse(data) {
+      const cls = data.blocked ? "denied" : data.status === "refused" ? "refused" : "ok";
+      $("responseBox").innerHTML = `
+        <span class="status-pill ${cls}">${data.status || "?"}</span>
+        ${data.blocked ? '<span class="status-pill denied">blocked</span>' : ""}
+        <div class="answer">${escapeHtml(data.answer || "")}</div>
+        <div class="meta">
+          <span>engine=${escapeHtml(data.engine || "—")}</span>
+          <span>intent=${escapeHtml(data.intent || "—")}</span>
+          <span>approved=${data.evaluator_approved ?? "—"}</span>
+          <span>citations=${escapeHtml((data.citations || []).join(", ") || "none")}</span>
+        </div>`;
+    }
+
+    function renderTrace(trace) {
+      const box = $("traceBox");
+      if (!trace || !trace.length) {
+        box.innerHTML = `<li class="empty" style="border:none;padding-left:0">No step trace (rules mode has no LangGraph nodes).</li>`;
+        return;
+      }
+      box.innerHTML = trace
+        .map((t) => {
+          const { step, ...rest } = t;
+          return `<li><div class="step">${escapeHtml(step)}</div><div class="detail">${escapeHtml(JSON.stringify(rest))}</div></li>`;
+        })
+        .join("");
+    }
+
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    document.querySelectorAll(".presets button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        $("message").value = btn.dataset.msg;
+      });
+    });
+
+    $("runBtn").addEventListener("click", async () => {
+      const btn = $("runBtn");
+      btn.disabled = true;
+      try {
+        const scope = $("scope").value;
+        const res = await fetch("/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-User-Scope": scope,
+          },
+          body: JSON.stringify({
+            message: $("message").value,
+            mode: $("mode").value,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          $("responseBox").innerHTML = `<span class="status-pill denied">http ${res.status}</span><div class="answer">${escapeHtml(JSON.stringify(data))}</div>`;
+          renderTrace([]);
+        } else {
+          renderResponse(data);
+          renderTrace(data.trace);
+        }
+        await refreshAudit();
+        await refreshHealth();
+      } catch (err) {
+        $("responseBox").innerHTML = `<span class="status-pill denied">error</span><div class="answer">${escapeHtml(err.message)}</div>`;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    refreshHealth();
+    refreshAudit();
+  </script>
+</body>
+</html>

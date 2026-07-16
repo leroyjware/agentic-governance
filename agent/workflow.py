@@ -1,8 +1,13 @@
 """Multi-agent LangGraph workflow driven by Semantic Harness.
 
-Flow (matches harness/harness.jsonld sh:Workflow steps):
+Flow (harness-aligned):
 
-  authorize → route → plan → evaluate → finalize
+  authorize → route → plan → evaluate ─┬→ finalize
+                         ↑             │
+                         └─ replan (1)×┘
+
+Write tools only when intent == schedule (tool tiers).
+Evaluator reject triggers one replan with feedback, then hard deny.
 
 Adding an agent:
   1. Add sh:Agent (+ skill) to harness/harness.jsonld
@@ -24,6 +29,7 @@ from agent.harness_loader import load_harness
 from agent.llm import build_chat_model
 from agent.tools import get_citations, set_request_scope, tools_by_names
 from governance import audit, authorization, output_guardrails
+from governance.tool_tiers import filter_tools_for_intent
 
 NodeFn = Callable[["WorkflowState"], dict[str, Any]]
 
@@ -39,6 +45,7 @@ class WorkflowState(TypedDict, total=False):
     evaluator_approved: bool
     evaluator_feedback: str
     evaluator_score: float
+    retry_count: int
     answer: str
     status: str
     blocked: bool
@@ -133,17 +140,31 @@ def node_route(state: WorkflowState) -> dict[str, Any]:
 def node_plan(state: WorkflowState) -> dict[str, Any]:
     h = load_harness()
     prompt = h.system_prompt("Healthcare Planner")
-    # Augment with routed intent
+    intent = state.get("intent") or "unknown"
     prompt = (
-        f"{prompt}\n\n## Routed intent\n{state.get('intent', 'unknown')}\n"
-        "Use tools appropriate to that intent."
+        f"{prompt}\n\n## Routed intent\n{intent}\n"
+        "Use only the tools provided. Write/schedule tools appear only for schedule intent."
     )
+
+    retry_count = int(state.get("retry_count") or 0)
+    # Replan after evaluator rejection: incorporate feedback and bump retry
+    if state.get("evaluator_approved") is False and state.get("evaluator_feedback"):
+        retry_count = retry_count + 1
+        prompt += (
+            f"\n\n## Evaluator feedback (revise draft — attempt {retry_count})\n"
+            f"{state.get('evaluator_feedback')}\n"
+            "Fix citations and grounding. Do not invent clinical facts."
+        )
+
     model_name = h.model_for("Healthcare Planner")
     agent = h.agent_by_name("Healthcare Planner")
     temp = float(agent.get("temperature") or 0.2) if agent else 0.2
 
-    # Tool allowlist: agent hasTool ∩ sh:Policy allowlist
-    allowed_tool_names = h.allowed_tools_for_agent("Healthcare Planner")
+    # hasTool ∩ sh:Policy ∩ intent tier (write tools only for schedule)
+    allowed_tool_names = filter_tools_for_intent(
+        h.allowed_tools_for_agent("Healthcare Planner"),
+        intent,
+    )
     tools = tools_by_names(allowed_tool_names)
 
     set_request_scope(state["user_scope"])
@@ -170,12 +191,16 @@ def node_plan(state: WorkflowState) -> dict[str, Any]:
     return {
         "draft": draft,
         "citations": citations,
+        "retry_count": retry_count,
+        "evaluator_approved": None,  # clear before next evaluate
         "trace": _trace(
             state,
             "plan",
             draft_preview=draft[:200],
             citations=citations,
             tools=sorted(allowed_tool_names),
+            retry_count=retry_count,
+            write_tools=("schedule_appointment" in allowed_tool_names),
         ),
     }
 
@@ -337,6 +362,15 @@ def _after_authorize(state: WorkflowState) -> Literal["route", "finalize"]:
     return "finalize" if state.get("blocked") else "route"
 
 
+def _after_evaluate(state: WorkflowState) -> Literal["plan", "finalize"]:
+    """One replan after reject; then finalize (deny path inside finalize)."""
+    if state.get("evaluator_approved"):
+        return "finalize"
+    if int(state.get("retry_count") or 0) < 1:
+        return "plan"
+    return "finalize"
+
+
 def build_workflow():
     """Compile the multi-agent StateGraph."""
     g: StateGraph = StateGraph(WorkflowState)
@@ -347,12 +381,21 @@ def build_workflow():
     g.add_conditional_edges("authorize", _after_authorize, {"route": "route", "finalize": "finalize"})
     g.add_edge("route", "plan")
     g.add_edge("plan", "evaluate")
-    g.add_edge("evaluate", "finalize")
+    g.add_conditional_edges(
+        "evaluate",
+        _after_evaluate,
+        {"plan": "plan", "finalize": "finalize"},
+    )
     g.add_edge("finalize", END)
     return g.compile()
 
 
 _compiled = None
+
+
+def reset_workflow_cache() -> None:
+    global _compiled
+    _compiled = None
 
 
 def get_workflow():
@@ -371,6 +414,7 @@ def run_workflow(user_scope: str, message: str) -> dict[str, Any]:
             "message": message,
             "trace": [],
             "citations": [],
+            "retry_count": 0,
             "engine": "langgraph-workflow",
         }
     )
@@ -385,5 +429,6 @@ def run_workflow(user_scope: str, message: str) -> dict[str, Any]:
         "evaluator_approved": final.get("evaluator_approved"),
         "evaluator_score": final.get("evaluator_score"),
         "evaluator_feedback": final.get("evaluator_feedback"),
+        "retry_count": final.get("retry_count") or 0,
         "trace": final.get("trace") or [],
     }
