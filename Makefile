@@ -1,25 +1,27 @@
-.PHONY: help install test gate eval run validate-harness
+.PHONY: help install test eval gate run smoke validate-harness
 
 export PYTHONPATH := .
+export AGENT_MODE ?= rules
 
 help:
 	@echo "  make install   pip install -r requirements.txt"
-	@echo "  make test      pytest"
-	@echo "  make eval      run all evaluation gates"
-	@echo "  make gate      test + eval + harness validate"
-	@echo "  make run       start API on :8080"
+	@echo "  make test      pytest (rules mode)"
+	@echo "  make eval      PHI / hallucination / grounding / latency gates"
+	@echo "  make gate      test + eval"
+	@echo "  make run       API on :8080 (auto → LangGraph if key set)"
+	@echo "  make smoke     live LangGraph smoke (requires API key)"
 
 install:
 	pip install -r requirements.txt
 
 test:
-	pytest tests/ -q
+	AGENT_MODE=rules pytest tests/ -q
 
 eval:
-	python evaluation/phi.py
-	python evaluation/hallucination.py
-	python evaluation/grounding.py
-	python evaluation/latency.py
+	AGENT_MODE=rules python evaluation/phi.py
+	AGENT_MODE=rules python evaluation/hallucination.py
+	AGENT_MODE=rules python evaluation/grounding.py
+	AGENT_MODE=rules python evaluation/latency.py
 
 gate: test eval
 	@$(MAKE) validate-harness
@@ -32,4 +34,7 @@ validate-harness:
 	fi
 
 run:
-	uvicorn api.main:app --reload --port 8080
+	AGENT_MODE=auto uvicorn api.main:app --reload --port 8080
+
+smoke:
+	python scripts/smoke_langgraph.py

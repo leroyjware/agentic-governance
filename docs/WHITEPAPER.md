@@ -212,7 +212,7 @@ Audit events record who asked what, whether access was denied, and why. In regul
 | An enterprise AI SDLC reference | A production EHR integration |
 | A working governance + evaluation skeleton | A claim of HIPAA certification |
 | A pattern for auth-before-retrieval | A novel LLM training method |
-| Compatible with LangGraph as a swap-in | Locked to a single agent framework |
+| LangGraph ReAct agent inside the governance envelope | Locked to a single cloud vendor |
 | Thought leadership you can run locally | Slideware without code |
 
 Honesty about scope is part of the architecture. Overclaiming is itself a governance failure.
@@ -262,12 +262,20 @@ Try the three canonical scenarios:
 
 ---
 
+## Dual execution mode
+
+| Mode | Engine | Purpose |
+|------|--------|---------|
+| `graph` / `auto` + API key | **LangGraph** ReAct + scoped tools | Realistic agent demos |
+| `rules` / CI | Deterministic planner | Quality gates without LLM spend |
+
+Unauthorized requests are denied **before** either engine runs.
+
 ## Roadmap
 
 | Phase | Focus |
 |-------|--------|
-| **Shipped** | Governance chain, eval gates, FastAPI, Prometheus, harness, CI |
-| **Next** | LangGraph + live LLM behind the same middleware |
+| **Shipped** | Governance chain, LangGraph agent, rules fallback, eval gates, FastAPI, Prometheus, harness, CI |
 | **Next** | Grafana dashboards, richer eval corpora |
 | **Later** | Human-in-the-loop approval for high-risk tools |
 

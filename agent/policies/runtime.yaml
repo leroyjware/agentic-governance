@@ -1,0 +1,12 @@
+# Runtime policy overrides (loaded by future policy_engine).
+# Tool allowlist is enforced in code via agent.tools — models cannot choose a patient scope.
+
+autonomy_tier: L1
+allowed_tools:
+  - retrieve_records
+  - schedule_appointment
+  - summarize_visit
+forbidden:
+  - cross_patient_retrieval
+  - unscoped_queries
+synthetic_data_only: true

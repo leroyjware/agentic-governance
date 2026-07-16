@@ -9,6 +9,9 @@ on:
 jobs:
   governance-gates:
     runs-on: ubuntu-latest
+    env:
+      AGENT_MODE: rules
+      PYTHONPATH: .
     steps:
       - uses: actions/checkout@v4
 
@@ -20,32 +23,19 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Unit + integration tests
-        run: PYTHONPATH=. pytest tests/ -q
-        env:
-          PYTHONPATH: .
+        run: pytest tests/ -q
 
       - name: PHI leakage gate
-        run: PYTHONPATH=. python evaluation/phi.py
+        run: python evaluation/phi.py
 
       - name: Hallucination gate
-        run: PYTHONPATH=. python evaluation/hallucination.py
+        run: python evaluation/hallucination.py
 
       - name: Grounding gate
-        run: PYTHONPATH=. python evaluation/grounding.py
+        run: python evaluation/grounding.py
 
       - name: Latency gate
-        run: PYTHONPATH=. python evaluation/latency.py
+        run: python evaluation/latency.py
 
-      - name: Validate Semantic Harness
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Harness validate (if semantic-runtimes available)
-        continue-on-error: true
-        run: |
-          if [ -d ../semantic-runtimes ]; then
-            node ../semantic-runtimes/cli/bin/harness.js validate harness/harness.jsonld
-          else
-            echo "semantic-runtimes not in tree — skip harness validate"
-          fi
+      - name: Import LangGraph stack
+        run: python -c "from agent.graph import graph_available; assert graph_available()"

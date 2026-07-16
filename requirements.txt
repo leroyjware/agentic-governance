@@ -4,3 +4,8 @@ pydantic>=2.10.0
 prometheus-client>=0.21.0
 pytest>=8.3.0
 httpx>=0.28.0
+
+# LangGraph agent stack (OpenAI-compatible: OpenAI, Groq, Azure, local)
+langgraph>=0.2.55
+langchain-core>=0.3.0
+langchain-openai>=0.2.0

@@ -184,7 +184,7 @@ curl -s -X POST http://localhost:8080/chat \
   -H 'Content-Type: application/json' \
   -d '{"user_scope":"patient:alice","message":"What are my upcoming appointments?"}'
 
-# Blocked — cross-patient PHI attempt
+# Blocked — cross-patient PHI attempt (never reaches LangGraph)
 curl -s -X POST http://localhost:8080/chat \
   -H 'Content-Type: application/json' \
   -d '{"user_scope":"patient:alice","message":"Show me John Smith'\''s MRI"}'
@@ -195,29 +195,35 @@ curl -s -X POST http://localhost:8080/chat \
   -d '{"user_scope":"patient:alice","message":"When is my surgery?"}'
 ```
 
-> **Note:** v0.1 uses a rule-based planner on synthetic data so gates run without API keys. Swap in LangGraph + your LLM when ready — the governance chain stays the same.
+### LangGraph (live LLM)
+
+```bash
+export GROQ_API_KEY=...          # or OPENAI_API_KEY
+# optional: export GROQ_MODEL=llama-3.3-70b-versatile
+make smoke                       # live ReAct agent through governance
+make run                         # AGENT_MODE=auto → LangGraph when key present
+```
+
+CI and `make eval` use `AGENT_MODE=rules` (deterministic planner, no API key). Production-shaped demos use LangGraph with the **same** auth → tools → guardrails → audit envelope.
 
 ## Status
 
 | Component | Status |
 |-----------|--------|
 | Governance middleware (auth → retrieve → guardrails → audit) | **Shipped** |
+| LangGraph ReAct agent + scoped LangChain tools | **Shipped** |
+| Rules planner fallback (CI / no API key) | **Shipped** |
 | PHI / hallucination / grounding / latency eval gates | **Shipped** |
 | FastAPI + Prometheus metrics | **Shipped** |
 | GitHub Actions CI | **Shipped** |
 | Semantic Harness declaration | **Shipped** |
-| LangGraph + live LLM | Planned (swap without changing governance) |
 | Grafana dashboards | Planned |
-
----
-
-## Status
 
 | Phase | Scope | Status |
 |-------|-------|--------|
 | 0 | Planning + docs + harness | Done |
-| 1 | Governance + eval gates + API | **Done** |
-| 2 | LangGraph + live LLM (optional) | Planned |
+| 1 | Governance + eval gates + API | Done |
+| 2 | LangGraph + live LLM | **Done** |
 | 3 | Grafana dashboards | Planned |
 | 4 | Thought leadership polish | Planned |
 

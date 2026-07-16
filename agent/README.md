@@ -1,37 +1,47 @@
-# Agent (orchestrator)
+# Agent (LangGraph + rules fallback)
 
-**Status: shipped (rule-based planner)** — LangGraph swap-in planned.
+**Status: shipped**
 
 ```
 agent/
-└── planner.py   # authorize → scoped retrieve → answer → guardrails → audit
+├── graph.py           # LangGraph ReAct agent (create_react_agent)
+├── runtime.py         # authorize → graph|rules → guardrails → audit
+├── planner.py         # Deterministic rules engine (CI / no API key)
+├── tools.py           # Scoped LangChain tools
+├── llm.py             # OpenAI-compatible factory (OpenAI / Groq)
+├── prompts/system.md  # System doctrine
+└── policies/          # Runtime policy YAML
 ```
 
-## What runs today
+## Dual mode
 
-`planner.py` is a **deterministic, rule-based** healthcare assistant so governance and CI gates work **without API keys**.
+| Mode | When | Engine |
+|------|------|--------|
+| `auto` (default) | `OPENAI_API_KEY` or `GROQ_API_KEY` set | **LangGraph** |
+| `auto` | no key | Rules planner |
+| `graph` | key required | **LangGraph** |
+| `rules` | CI / eval gates | Rules planner |
 
-It is intentionally not LangGraph. The point of this repo is the envelope around the agent:
+Governance always runs **before** the agent: unauthorized cross-patient requests never reach LangGraph.
 
-```
-authorization → scoped retrieval → planner → output guardrails → audit
-```
+## Tools (scoped via contextvars)
 
-Swap `run_planner()` for a LangGraph graph later; leave `governance/` and `evaluation/` unchanged.
+- `retrieve_records` — only authorized patient
+- `schedule_appointment` — synthetic booking
+- `summarize_visit` — visit notes
 
-## What is not here yet
+The model **cannot** pass a patient id into tools. Scope comes from the authenticated request.
 
-| File | Status |
-|------|--------|
-| `graph.py` (LangGraph) | Planned |
-| `tools.py` (LLM tool calling) | Planned |
-| `prompts/` | Planned |
-
-## Test locally
+## Local
 
 ```bash
-PYTHONPATH=. python3 evaluation/phi.py
-PYTHONPATH=. python3 evaluation/hallucination.py
-PYTHONPATH=. python3 evaluation/grounding.py
-PYTHONPATH=. python3 evaluation/latency.py
+pip install -r requirements.txt
+
+# CI-safe gates (rules)
+AGENT_MODE=rules make eval
+
+# Live LangGraph (needs key)
+export GROQ_API_KEY=...   # or OPENAI_API_KEY
+PYTHONPATH=. python scripts/smoke_langgraph.py
+make run
 ```
