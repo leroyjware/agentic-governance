@@ -18,9 +18,9 @@ htmlcov/
 # Evaluation reports (generated)
 evaluation/reports/*.json
 
-# Runtime audit log
-data/audit.jsonl
-data/
+# Runtime audit log (repo root only — do not ignore knowledge/data/)
+/data/
+/data/audit.jsonl
 
 # IDE
 .idea/

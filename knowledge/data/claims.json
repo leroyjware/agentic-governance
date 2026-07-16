@@ -1,0 +1,35 @@
+[
+  {
+    "member_id": "member:alice",
+    "display_name": "Alice Chen",
+    "claims": [
+      {
+        "claim_id": "CLM-SYN-1001",
+        "service_date": "2026-05-10",
+        "type": "outpatient visit",
+        "status": "approved",
+        "amount_usd": 240
+      },
+      {
+        "claim_id": "CLM-SYN-1002",
+        "service_date": "2026-06-02",
+        "type": "lab panel",
+        "status": "pending",
+        "amount_usd": 85
+      }
+    ]
+  },
+  {
+    "member_id": "member:john",
+    "display_name": "John Smith",
+    "claims": [
+      {
+        "claim_id": "CLM-SYN-2001",
+        "service_date": "2026-04-18",
+        "type": "imaging",
+        "status": "denied",
+        "amount_usd": 1200
+      }
+    ]
+  }
+]
