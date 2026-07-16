@@ -1,6 +1,6 @@
 [project]
 name = "agentic-governance"
-version = "0.5.0"
+version = "0.6.0"
 description = "Enterprise Agentic AI SDLC Reference Architecture"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -23,8 +23,6 @@ dependencies = [
   "httpx>=0.28.0",
   "structlog>=24.4.0",
   "prometheus-client>=0.21.0",
-  "opentelemetry-api>=1.28.0",
-  "opentelemetry-sdk>=1.28.0",
 ]
 
 [project.optional-dependencies]

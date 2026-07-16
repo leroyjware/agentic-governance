@@ -311,6 +311,7 @@
         ${data.blocked ? '<span class="status-pill denied">blocked</span>' : ""}
         <div class="answer">${escapeHtml(data.answer || "")}</div>
         <div class="meta">
+          <span>request_id=${escapeHtml(data.request_id || "—")}</span>
           <span>assistant=${escapeHtml(data.assistant || "—")}</span>
           <span>engine=${escapeHtml(data.engine || "—")}</span>
           <span>intent=${escapeHtml(data.intent || "—")}</span>

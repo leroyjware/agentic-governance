@@ -1,8 +1,4 @@
-"""LangGraph entrypoint — multi-agent workflow (preferred) + legacy single ReAct.
-
-Preferred path: `workflow.run_workflow` (authorize → route → plan → evaluate).
-Legacy: single `create_react_agent` for debugging only.
-"""
+"""LangGraph entrypoint — multi-agent workflow."""
 
 from __future__ import annotations
 
@@ -11,9 +7,13 @@ from typing import Any
 from agent.workflow import run_workflow
 
 
-def run_langgraph_agent(user_scope: str, message: str) -> dict[str, Any]:
+def run_langgraph_agent(
+    user_scope: str,
+    message: str,
+    request_id: str | None = None,
+) -> dict[str, Any]:
     """Run the harness-aligned multi-agent LangGraph workflow."""
-    return run_workflow(user_scope, message)
+    return run_workflow(user_scope, message, request_id=request_id)
 
 
 def graph_available() -> bool:

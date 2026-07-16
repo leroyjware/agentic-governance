@@ -1,0 +1,45 @@
+# Thin observability stack — Prometheus + Grafana only.
+# Not ELK / Jaeger / LangSmith. API can be local (make run) or the api service.
+#
+#   make run          # or: docker compose -f docker-compose.obs.yml up api -d
+#   make obs-up
+#   open http://localhost:3000  (Grafana)  http://localhost:9090 (Prometheus)
+
+services:
+  api:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      AGENT_MODE: rules
+      AUDIT_LOG_PATH: /app/data/audit.jsonl
+    volumes:
+      - audit-data:/app/data
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_DEFAULT_THEME: dark
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/agentic-governance.json:/var/lib/grafana/dashboards/agentic-governance.json:ro
+    depends_on:
+      - prometheus
+
+volumes:
+  audit-data:

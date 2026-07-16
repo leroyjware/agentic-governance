@@ -8,4 +8,6 @@ observability/
 
 **Shipped metrics:** `agent_requests_total`, `agent_phi_violations_total`, `agent_refusals_total`, `agent_request_latency_seconds`.
 
-**Grafana:** Import `grafana/agentic-governance.json` into any Grafana that scrapes the API `/metrics` endpoint. Compose stack is deferred — [PLAN.md](../PLAN.md).
+**Grafana:** Import `grafana/agentic-governance.json`, or run `make obs-up` (Prometheus + Grafana only).
+
+See [docs/KPI.md](../docs/KPI.md) and [docs/ADOPTERS.md](../docs/ADOPTERS.md).

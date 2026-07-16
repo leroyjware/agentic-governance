@@ -1,4 +1,4 @@
-.PHONY: help install test eval gate run smoke demo live showcase lint validate-harness hygiene
+.PHONY: help install test eval gate run smoke demo live showcase lint validate-harness hygiene obs-up obs-down
 
 export PYTHONPATH := .
 export AGENT_MODE ?= rules
@@ -7,15 +7,16 @@ export AUDIT_LOG_PATH ?= off
 help:
 	@echo "  make install            pip install -r requirements.txt"
 	@echo "  make test               pytest (rules mode)"
-	@echo "  make eval               PHI / hallucination / grounding / latency / prompt regression"
+	@echo "  make eval               PHI / hall / ground / latency / prompt / claims"
 	@echo "  make hygiene            static synthetic-PHI fixture scan"
 	@echo "  make validate-harness   structural (+ sibling CLI if present)"
 	@echo "  make lint               ruff if available, else compileall"
 	@echo "  make gate               test + eval + hygiene + validate-harness + lint"
 	@echo "  make run                API on :8080 — open /ui control plane"
-	@echo "  make showcase           narrative hard-path demo (rules + optional graph)"
-	@echo "  make demo|live|smoke    LangGraph scripts (needs GROQ_API_KEY)"
-	@echo "  See docs/LOCAL.md and PLAN.md"
+	@echo "  make obs-up             Prometheus + Grafana (docker-compose.obs.yml)"
+	@echo "  make obs-down           stop obs stack"
+	@echo "  make showcase           narrative hard-path demo"
+	@echo "  See docs/LOCAL.md docs/ADOPTERS.md PLAN.md"
 
 install:
 	pip install -r requirements.txt
@@ -67,3 +68,11 @@ smoke:
 
 showcase:
 	python scripts/showcase.py
+
+obs-up:
+	docker compose -f docker-compose.obs.yml up -d prometheus grafana
+	@echo "Prometheus http://localhost:9090  Grafana http://localhost:3000"
+	@echo "Scrape target: compose api service OR host.docker.internal:8080 (make run)"
+
+obs-down:
+	docker compose -f docker-compose.obs.yml down

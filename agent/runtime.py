@@ -19,6 +19,7 @@ from agent.claims_planner import run_claims_planner
 from agent.graph import graph_available, run_langgraph_agent
 from agent.llm import llm_configured
 from agent.planner import run_planner
+from governance.request_context import new_request_id, reset_request_id, set_request_id
 
 Mode = Literal["auto", "graph", "rules"]
 Assistant = Literal["healthcare", "claims"]
@@ -50,18 +51,28 @@ def handle_chat(
     message: str,
     mode: Mode | None = None,
     assistant: Assistant = "healthcare",
+    request_id: str | None = None,
 ) -> dict[str, Any]:
-    """Full request path for the selected assistant."""
-    if assistant == "claims":
-        # Claims vertical is rules + harness today (honest scope).
-        result = run_claims_planner(user_scope, message)
-        return {**result, "assistant": "claims"}
+    """Full request path for the selected assistant. Sets request_id context."""
+    rid = (request_id or "").strip() or new_request_id()
+    token = set_request_id(rid)
+    try:
+        if assistant == "claims":
+            result = run_claims_planner(user_scope, message)
+            return {**result, "assistant": "claims", "request_id": rid}
 
-    resolved = resolve_mode(mode)
+        resolved = resolve_mode(mode)
 
-    if use_langgraph(resolved):
-        result = run_langgraph_agent(user_scope, message)
-        return {**result, "assistant": "healthcare"}
+        if use_langgraph(resolved):
+            result = run_langgraph_agent(user_scope, message, request_id=rid)
+            return {**result, "assistant": "healthcare", "request_id": rid}
 
-    result = run_planner(user_scope, message)
-    return {**result, "engine": result.get("engine") or "rules", "assistant": "healthcare"}
+        result = run_planner(user_scope, message)
+        return {
+            **result,
+            "engine": result.get("engine") or "rules",
+            "assistant": "healthcare",
+            "request_id": rid,
+        }
+    finally:
+        reset_request_id(token)

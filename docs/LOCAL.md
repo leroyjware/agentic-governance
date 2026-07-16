@@ -50,7 +50,17 @@ make live          # curated PHI / grounding / refusal / imaging
 ```bash
 make run
 # open http://localhost:8080/ui
+# responses include request_id (+ X-Request-Id header)
 ```
+
+Optional metrics UI (Prometheus + Grafana only — not ELK):
+
+```bash
+make obs-up
+# Grafana http://localhost:3000  Prometheus http://localhost:9090
+```
+
+See [ADOPTERS.md](./ADOPTERS.md), [KPI.md](./KPI.md), [AUDIT-SCHEMA.md](./AUDIT-SCHEMA.md).
 
 Presets in the UI: appointments, PHI block, refuse, schedule write, visit summary.
 

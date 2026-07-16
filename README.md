@@ -8,7 +8,7 @@
 
 > *Most teams can build a LangGraph agent. Few can prove it's production-ready.*
 
-**Whitepaper:** [docs/WHITEPAPER.md](docs/WHITEPAPER.md) · **Local demo:** [docs/LOCAL.md](docs/LOCAL.md) · **Second vertical:** [docs/SECOND-VERTICAL.md](docs/SECOND-VERTICAL.md) · **Plan:** [PLAN.md](PLAN.md)
+**Whitepaper:** [docs/WHITEPAPER.md](docs/WHITEPAPER.md) · **Local:** [docs/LOCAL.md](docs/LOCAL.md) · **Adopters:** [docs/ADOPTERS.md](docs/ADOPTERS.md) · **KPIs:** [docs/KPI.md](docs/KPI.md) · **Plan:** [PLAN.md](PLAN.md)
 
 This is **not** a chatbot demo. It is an open-source reference showing how to **operationalize** agentic AI with governance, evaluation, and CI discipline.
 
@@ -27,9 +27,10 @@ This is **not** a chatbot demo. It is an open-source reference showing how to **
 | How do we reuse the envelope? | Claims second vertical — same pattern, different harness ([SECOND-VERTICAL.md](docs/SECOND-VERTICAL.md)) |
 | How do we see governance live? | Control plane at `/ui` + `make showcase` |
 | How do we describe the architecture? | Semantic Harness JSON-LD — agents, tools, policy, invariants |
-| How do we monitor? | Prometheus `/metrics` + importable Grafana JSON |
+| How do we monitor? | Prometheus `/metrics` + optional `make obs-up` (Prom+Grafana only) |
+| How do we correlate a request? | `request_id` on API, audit JSONL, and graph `trace[]` |
 
-**Known limitations** (v0.5): in-memory synthetic store (not pgvector); demo identity via `X-User-Scope` (not JWT); claims vertical is rules-path (healthcare is the LangGraph flagship); live LangGraph optional in CI.
+**Known limitations** (v0.6): in-memory synthetic store (not pgvector); demo identity via `X-User-Scope` (not JWT); claims vertical is rules-path; no LangSmith/ELK (by design — see [ADOPTERS.md](docs/ADOPTERS.md)).
 
 ---
 
@@ -122,8 +123,9 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
 make gate          # full deterministic suite
-make showcase      # hard-path narrative (PHI → read → refuse → schedule write)
-make run           # http://localhost:8080/ui  (control plane)
+make showcase      # hard-path narrative
+make run           # http://localhost:8080/ui
+make obs-up        # optional Prometheus :9090 + Grafana :3000
 ```
 
 ```bash
@@ -162,9 +164,11 @@ Add agents: [docs/ADD-AN-AGENT.md](docs/ADD-AN-AGENT.md).
 | Rules planner + eval gates (PHI 14 / hall / ground / latency) | **Shipped** |
 | Control plane UI (`/ui`) + `make showcase` | **Shipped** |
 | Claims second vertical + Grafana dashboard JSON | **Shipped** |
+| `request_id` correlation + audit schema + KPI/adopter docs | **Shipped** |
+| Optional Prom+Grafana compose (`make obs-up`) | **Shipped** |
 | CI matching the diagram above | **Shipped** |
-| Flagship complete (v0.5) | **Yes** — [PLAN.md](PLAN.md) |
-| pgvector / JWT / claims LangGraph | **Deferred** — [PLAN.md](PLAN.md) |
+| Reference hardening (v0.6) | **Yes** — [PLAN.md](PLAN.md) |
+| ELK / LangSmith / JWT / pgvector | **Deferred / reject** — [PLAN.md](PLAN.md) |
 
 ---
 

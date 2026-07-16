@@ -7,17 +7,18 @@ import time
 from pathlib import Path
 from typing import Literal
 
-from fastapi import FastAPI, Header, HTTPException, Query
-from fastapi.responses import RedirectResponse, Response
+from fastapi import FastAPI, Header, HTTPException, Query, Response
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from agent.llm import llm_configured
 from agent.runtime import handle_chat, resolve_mode, use_langgraph
 from governance import audit
+from governance.request_context import new_request_id
 from observability import metrics
 
-APP_VERSION = "0.5.0"
+APP_VERSION = "0.6.0"
 UI_DIR = Path(__file__).resolve().parents[1] / "ui"
 
 app = FastAPI(
@@ -25,7 +26,7 @@ app = FastAPI(
     description=(
         "Governed assistants on synthetic data. Healthcare (LangGraph flagship) + "
         "Claims (second vertical). Control plane at /ui. "
-        "Identity: X-User-Scope; AUTH_STRICT=1 to require it."
+        "Correlation: request_id on responses, audit, and graph traces."
     ),
     version=APP_VERSION,
 )
@@ -45,6 +46,10 @@ class ChatRequest(BaseModel):
         default="healthcare",
         description="healthcare (flagship) | claims (second vertical, rules)",
     )
+    request_id: str | None = Field(
+        default=None,
+        description="Optional client correlation id; otherwise server generates a UUID",
+    )
 
 
 class ChatResponse(BaseModel):
@@ -60,6 +65,7 @@ class ChatResponse(BaseModel):
     trace: list[dict] | None = None
     user_scope: str | None = None
     assistant: str | None = None
+    request_id: str | None = None
 
 
 def resolve_user_scope(
@@ -118,16 +124,25 @@ def prometheus_metrics() -> Response:
 @app.post("/chat", response_model=ChatResponse)
 def chat(
     req: ChatRequest,
+    response: Response,
     x_user_scope: str | None = Header(default=None, alias="X-User-Scope"),
+    x_request_id: str | None = Header(default=None, alias="X-Request-Id"),
 ) -> ChatResponse:
     start = time.perf_counter()
     user_scope = resolve_user_scope(req.user_scope, x_user_scope)
+    request_id = (req.request_id or x_request_id or "").strip() or new_request_id()
 
     mode = req.mode
     if mode is None and os.getenv("AGENT_MODE"):
         mode = resolve_mode()  # type: ignore[assignment]
 
-    result = handle_chat(user_scope, req.message, mode=mode, assistant=req.assistant)
+    result = handle_chat(
+        user_scope,
+        req.message,
+        mode=mode,
+        assistant=req.assistant,
+        request_id=request_id,
+    )
 
     if result.get("blocked"):
         metrics.record_phi_block()
@@ -139,6 +154,9 @@ def chat(
         metrics.record_request("ok")
 
     metrics.LATENCY.observe(time.perf_counter() - start)
+
+    rid = result.get("request_id") or request_id
+    response.headers["X-Request-Id"] = rid
 
     return ChatResponse(
         answer=result["answer"],
@@ -153,13 +171,14 @@ def chat(
         trace=result.get("trace"),
         user_scope=user_scope,
         assistant=result.get("assistant") or req.assistant,
+        request_id=rid,
     )
 
 
 @app.get("/audit")
 def audit_log(limit: int = Query(default=50, ge=1, le=500)) -> dict:
-    events = audit.get_events()
-    return {"events": events[-limit:], "count": len(events)}
+    events = audit.get_events(limit=limit)
+    return {"events": events, "count": len(events)}
 
 
 if UI_DIR.is_dir():

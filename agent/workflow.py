@@ -29,6 +29,7 @@ from agent.harness_loader import load_harness
 from agent.llm import build_chat_model
 from agent.tools import get_citations, set_request_scope, tools_by_names
 from governance import audit, authorization, output_guardrails
+from governance.request_context import get_request_id
 from governance.tool_tiers import filter_tools_for_intent
 
 NodeFn = Callable[["WorkflowState"], dict[str, Any]]
@@ -37,6 +38,7 @@ NodeFn = Callable[["WorkflowState"], dict[str, Any]]
 class WorkflowState(TypedDict, total=False):
     user_scope: str
     message: str
+    request_id: str
     authorized: bool
     deny_reason: str | None
     intent: str
@@ -61,7 +63,10 @@ _SCOPE_NAMES = {
 
 
 def _trace(state: WorkflowState, step: str, **extra: Any) -> list[dict[str, Any]]:
-    entry = {"step": step, **extra}
+    entry: dict[str, Any] = {"step": step, **extra}
+    rid = state.get("request_id") or get_request_id()
+    if rid and "request_id" not in entry:
+        entry["request_id"] = rid
     return list(state.get("trace") or []) + [entry]
 
 
@@ -405,13 +410,19 @@ def get_workflow():
     return _compiled
 
 
-def run_workflow(user_scope: str, message: str) -> dict[str, Any]:
+def run_workflow(
+    user_scope: str,
+    message: str,
+    request_id: str | None = None,
+) -> dict[str, Any]:
     """Execute the harness-aligned multi-agent workflow."""
+    rid = request_id or get_request_id() or ""
     graph = get_workflow()
     final: WorkflowState = graph.invoke(
         {
             "user_scope": user_scope,
             "message": message,
+            "request_id": rid,
             "trace": [],
             "citations": [],
             "retry_count": 0,
@@ -430,5 +441,6 @@ def run_workflow(user_scope: str, message: str) -> dict[str, Any]:
         "evaluator_score": final.get("evaluator_score"),
         "evaluator_feedback": final.get("evaluator_feedback"),
         "retry_count": final.get("retry_count") or 0,
+        "request_id": rid or final.get("request_id"),
         "trace": final.get("trace") or [],
     }

@@ -1,0 +1,19 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  # Prefer the compose `api` service when the full stack is up.
+  - job_name: agentic-governance
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["api:8080"]
+        labels:
+          source: compose
+
+  # When you only run `make run` on the host + obs containers:
+  - job_name: agentic-governance-host
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["host.docker.internal:8080"]
+        labels:
+          source: host

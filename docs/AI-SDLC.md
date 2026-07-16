@@ -44,6 +44,8 @@ Eval gates use **`AGENT_MODE=rules`** (deterministic, no LLM spend). Live job ex
 
 Golden set: `evaluation/baselines/golden.jsonl` — add a line when you add a capability that must not regress.
 
+Runtime KPIs / audit contract: [KPI.md](./KPI.md), [AUDIT-SCHEMA.md](./AUDIT-SCHEMA.md). Adopters: [ADOPTERS.md](./ADOPTERS.md).
+
 ---
 
 ## Planned gates (not in CI yet)
