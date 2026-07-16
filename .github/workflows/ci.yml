@@ -49,6 +49,9 @@ jobs:
       - name: Latency gate
         run: python evaluation/latency.py
 
+      - name: Prompt regression gate
+        run: python evaluation/prompt_regression.py
+
       - name: Import LangGraph stack
         run: python -c "from agent.graph import graph_available; assert graph_available()"
 

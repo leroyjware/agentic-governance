@@ -22,7 +22,7 @@ This is **not** a chatbot demo. It is an open-source reference showing how to **
 |----------|---------------------|
 | How do we gate AI deployments? | CI runs unit tests + PHI / hallucination / grounding / latency + harness validate |
 | How do we prevent PHI leakage? | Auth **before** retrieval → scoped tools → output guardrails → audit |
-| How do we know the rules path didn't regress? | Deterministic eval suites on every PR (`AGENT_MODE=rules`) |
+| How do we know the rules path didn't regress? | Prompt regression + PHI / grounding / hallucination / latency on every push |
 | How do we run real multi-agent inference? | LangGraph: authorize → route → plan → evaluate (replan×1) → finalize |
 | How do we see governance live? | Control plane at `/ui` + `make showcase` |
 | How do we describe the architecture? | [Semantic Harness](harness/harness.jsonld) — agents, tools, policy, invariants |
@@ -40,6 +40,7 @@ Commit
   → Harness validate (structural)
   → Static synthetic-PHI hygiene
   → Unit + API tests
+  → Prompt regression (golden.jsonl)
   → Grounding evaluation
   → Hallucination tests
   → PHI leakage tests

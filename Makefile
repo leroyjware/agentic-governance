@@ -7,7 +7,7 @@ export AUDIT_LOG_PATH ?= off
 help:
 	@echo "  make install            pip install -r requirements.txt"
 	@echo "  make test               pytest (rules mode)"
-	@echo "  make eval               PHI / hallucination / grounding / latency"
+	@echo "  make eval               PHI / hallucination / grounding / latency / prompt regression"
 	@echo "  make hygiene            static synthetic-PHI fixture scan"
 	@echo "  make validate-harness   structural (+ sibling CLI if present)"
 	@echo "  make lint               ruff if available, else compileall"
@@ -28,6 +28,7 @@ eval:
 	AGENT_MODE=rules AUDIT_LOG_PATH=off python evaluation/hallucination.py
 	AGENT_MODE=rules AUDIT_LOG_PATH=off python evaluation/grounding.py
 	AGENT_MODE=rules AUDIT_LOG_PATH=off python evaluation/latency.py
+	AGENT_MODE=rules AUDIT_LOG_PATH=off python evaluation/prompt_regression.py
 
 hygiene:
 	python scripts/static_phi_hygiene.py
