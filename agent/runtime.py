@@ -19,6 +19,7 @@ from agent.claims_planner import run_claims_planner
 from agent.graph import graph_available, run_langgraph_agent
 from agent.llm import llm_configured
 from agent.planner import run_planner
+from governance.evidence import build_evidence
 from governance.request_context import new_request_id, reset_request_id, set_request_id
 
 Mode = Literal["auto", "graph", "rules"]
@@ -58,21 +59,29 @@ def handle_chat(
     token = set_request_id(rid)
     try:
         if assistant == "claims":
-            result = run_claims_planner(user_scope, message)
-            return {**result, "assistant": "claims", "request_id": rid}
-
-        resolved = resolve_mode(mode)
-
-        if use_langgraph(resolved):
-            result = run_langgraph_agent(user_scope, message, request_id=rid)
-            return {**result, "assistant": "healthcare", "request_id": rid}
-
-        result = run_planner(user_scope, message)
+            result = {**run_claims_planner(user_scope, message), "assistant": "claims", "request_id": rid}
+        else:
+            resolved = resolve_mode(mode)
+            if use_langgraph(resolved):
+                result = {
+                    **run_langgraph_agent(user_scope, message, request_id=rid),
+                    "assistant": "healthcare",
+                    "request_id": rid,
+                }
+            else:
+                result = {
+                    **run_planner(user_scope, message),
+                    "engine": "rules",
+                    "assistant": "healthcare",
+                    "request_id": rid,
+                }
+        evidence = build_evidence(result)
         return {
             **result,
-            "engine": result.get("engine") or "rules",
-            "assistant": "healthcare",
-            "request_id": rid,
+            "evidence": evidence,
+            "governance_score": evidence["governance"]["score"],
+            "governance_band": evidence["governance"]["band"],
+            "residual_risk": evidence["governance"]["residual_risk"],
         }
     finally:
         reset_request_id(token)

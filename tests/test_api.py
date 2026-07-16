@@ -34,6 +34,9 @@ def test_phi_blocked():
     )
     data = r.json()
     assert data["blocked"] is True
+    assert data["governance_score"] == 100
+    assert data["evidence"]["claims_satisfied"] >= 4
+    assert r.headers.get("X-Request-Id")
 
 
 def test_grounded_answer():
@@ -48,6 +51,8 @@ def test_grounded_answer():
     data = r.json()
     assert data["blocked"] is False
     assert len(data["citations"]) > 0
+    assert data["evidence"]["harness"]["path"]
+    assert data["governance_band"] in ("strong", "adequate", "weak")
 
 
 def test_refusal_without_context():

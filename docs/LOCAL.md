@@ -50,7 +50,7 @@ make live          # curated PHI / grounding / refusal / imaging
 ```bash
 make run
 # open http://localhost:8080/ui
-# responses include request_id (+ X-Request-Id header)
+# responses include request_id, evidence pack, governance_score (+ X-Request-Id header)
 ```
 
 Optional metrics UI (Prometheus + Grafana only — not ELK):
@@ -58,9 +58,10 @@ Optional metrics UI (Prometheus + Grafana only — not ELK):
 ```bash
 make obs-up
 # Grafana http://localhost:3000  Prometheus http://localhost:9090
+# Example alert rules (not auto-loaded): observability/prometheus/alerts.yml
 ```
 
-See [ADOPTERS.md](./ADOPTERS.md), [KPI.md](./KPI.md), [AUDIT-SCHEMA.md](./AUDIT-SCHEMA.md).
+See [EVIDENCE.md](./EVIDENCE.md), [ADOPTERS.md](./ADOPTERS.md), [KPI.md](./KPI.md), [AUDIT-SCHEMA.md](./AUDIT-SCHEMA.md).
 
 Presets in the UI: appointments, PHI block, refuse, schedule write, visit summary.
 

@@ -312,12 +312,26 @@
         <div class="answer">${escapeHtml(data.answer || "")}</div>
         <div class="meta">
           <span>request_id=${escapeHtml(data.request_id || "—")}</span>
+          <span>score=${data.governance_score ?? "—"} (${escapeHtml(data.governance_band || "—")})</span>
+          <span>residual_risk=${escapeHtml(data.residual_risk || "—")}</span>
           <span>assistant=${escapeHtml(data.assistant || "—")}</span>
           <span>engine=${escapeHtml(data.engine || "—")}</span>
           <span>intent=${escapeHtml(data.intent || "—")}</span>
           <span>approved=${data.evaluator_approved ?? "—"}</span>
           <span>citations=${escapeHtml((data.citations || []).join(", ") || "none")}</span>
+        </div>
+        <div class="answer" style="margin-top:0.75rem;font-size:0.85rem;color:var(--muted)">
+          ${renderEvidence(data.evidence)}
         </div>`;
+    }
+
+    function renderEvidence(ev) {
+      if (!ev || !ev.claims) return "No evidence pack.";
+      const rows = ev.claims
+        .map((c) => `${c.satisfied ? "✓" : "✗"} ${escapeHtml(c.id)} — ${escapeHtml(c.evidence || "")}`)
+        .join("<br/>");
+      const h = ev.harness ? escapeHtml(ev.harness.name || "") : "";
+      return `<strong>Evidence</strong> (${escapeHtml(String(ev.claims_satisfied))}/${escapeHtml(String(ev.claims_total))}) · ${h}<br/>${rows}`;
     }
 
     function renderTrace(trace) {

@@ -8,7 +8,7 @@
 
 > *Most teams can build a LangGraph agent. Few can prove it's production-ready.*
 
-**Whitepaper:** [docs/WHITEPAPER.md](docs/WHITEPAPER.md) · **Local:** [docs/LOCAL.md](docs/LOCAL.md) · **Adopters:** [docs/ADOPTERS.md](docs/ADOPTERS.md) · **KPIs:** [docs/KPI.md](docs/KPI.md) · **Plan:** [PLAN.md](PLAN.md)
+**Whitepaper:** [docs/WHITEPAPER.md](docs/WHITEPAPER.md) · **Local:** [docs/LOCAL.md](docs/LOCAL.md) · **Evidence:** [docs/EVIDENCE.md](docs/EVIDENCE.md) · **Controls map:** [docs/CONTROLS-MAP.md](docs/CONTROLS-MAP.md) · **Interview:** [docs/INTERVIEW-GUIDE.md](docs/INTERVIEW-GUIDE.md) · **Plan:** [PLAN.md](PLAN.md)
 
 This is **not** a chatbot demo. It is an open-source reference showing how to **operationalize** agentic AI with governance, evaluation, and CI discipline.
 
@@ -29,8 +29,9 @@ This is **not** a chatbot demo. It is an open-source reference showing how to **
 | How do we describe the architecture? | Semantic Harness JSON-LD — agents, tools, policy, invariants |
 | How do we monitor? | Prometheus `/metrics` + optional `make obs-up` (Prom+Grafana only) |
 | How do we correlate a request? | `request_id` on API, audit JSONL, and graph `trace[]` |
+| How do we prove a single run? | Evidence pack + governance score on every `/chat` ([EVIDENCE.md](docs/EVIDENCE.md)) |
 
-**Known limitations** (v0.6): in-memory synthetic store (not pgvector); demo identity via `X-User-Scope` (not JWT); claims vertical is rules-path; no LangSmith/ELK (by design — see [ADOPTERS.md](docs/ADOPTERS.md)).
+**Known limitations** (v0.7): in-memory synthetic store (not pgvector); demo identity via `X-User-Scope` (not JWT); claims vertical is rules-path; evidence pack is a receipt not a legal attestation; no HITL UI / LangSmith/ELK (by design — see [ADOPTERS.md](docs/ADOPTERS.md)).
 
 ---
 
@@ -167,8 +168,9 @@ Add agents: [docs/ADD-AN-AGENT.md](docs/ADD-AN-AGENT.md).
 | `request_id` correlation + audit schema + KPI/adopter docs | **Shipped** |
 | Optional Prom+Grafana compose (`make obs-up`) | **Shipped** |
 | CI matching the diagram above | **Shipped** |
-| Reference hardening (v0.6) | **Yes** — [PLAN.md](PLAN.md) |
-| ELK / LangSmith / JWT / pgvector | **Deferred / reject** — [PLAN.md](PLAN.md) |
+| Evidence pack + governance score (v0.7) | **Shipped** — [EVIDENCE.md](docs/EVIDENCE.md) |
+| Controls map + interview guide | **Shipped** — [CONTROLS-MAP.md](docs/CONTROLS-MAP.md), [INTERVIEW-GUIDE.md](docs/INTERVIEW-GUIDE.md) |
+| HITL / ELK / LangSmith / JWT / pgvector | **Deferred / reject** — [PLAN.md](PLAN.md) |
 
 ---
 

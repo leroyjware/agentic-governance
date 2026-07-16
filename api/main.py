@@ -18,7 +18,7 @@ from governance import audit
 from governance.request_context import new_request_id
 from observability import metrics
 
-APP_VERSION = "0.6.0"
+APP_VERSION = "0.7.0"
 UI_DIR = Path(__file__).resolve().parents[1] / "ui"
 
 app = FastAPI(
@@ -26,7 +26,7 @@ app = FastAPI(
     description=(
         "Governed assistants on synthetic data. Healthcare (LangGraph flagship) + "
         "Claims (second vertical). Control plane at /ui. "
-        "Correlation: request_id on responses, audit, and graph traces."
+        "Correlation: request_id. Evidence pack + governance score on every /chat."
     ),
     version=APP_VERSION,
 )
@@ -66,6 +66,10 @@ class ChatResponse(BaseModel):
     user_scope: str | None = None
     assistant: str | None = None
     request_id: str | None = None
+    governance_score: int | None = None
+    governance_band: str | None = None
+    residual_risk: str | None = None
+    evidence: dict | None = None
 
 
 def resolve_user_scope(
@@ -172,6 +176,10 @@ def chat(
         user_scope=user_scope,
         assistant=result.get("assistant") or req.assistant,
         request_id=rid,
+        governance_score=result.get("governance_score"),
+        governance_band=result.get("governance_band"),
+        residual_risk=result.get("residual_risk"),
+        evidence=result.get("evidence"),
     )
 
 

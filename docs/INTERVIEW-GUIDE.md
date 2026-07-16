@@ -4,81 +4,82 @@ Quick reference for principal/staff AI architect interviews — especially healt
 
 ---
 
-## "What does AI governance mean to you?"
+## Opening frame
 
-> I view governance as spanning the entire lifecycle. At design time, we declare agent capabilities, policies, and metrics in a Semantic Harness graph. During development, CI/CD enforces quality gates — prompt regression, grounding, hallucination refusal, PHI leakage tests, latency and cost budgets. In production, runtime middleware enforces authorization before retrieval, tool permissions, output scanning, and audit logging. In healthcare, governance isn't just compliance — it's operational discipline that makes agentic systems trustworthy at scale.
-
----
-
-## "Where does governance live?"
-
-Not one component. **Cross-cutting controls:**
-
-| Phase | Controls |
-|-------|----------|
-| Design | Architecture standards, harness declaration |
-| Development | Static scans, unit tests |
-| Pre-deploy | Evaluation suites, invariant probes |
-| Deploy | Approval gates, environment promotion |
-| Runtime | Auth, tool policy, output guardrails, audit |
-| Operations | Metrics, alerting, feedback to eval datasets |
-
-Point to: `docs/GOVERNANCE-LAYERS.md` and README CI diagram.
+> Most candidates show agents. I built a **governance envelope** you can clone and run: declare in Semantic Harness, execute in LangGraph (or rules), prove with CI gates, and return an **evidence pack** per request. LangGraph is swappable. Governance is the product.
 
 ---
 
-## "How do you prevent PHI leakage?"
+## Hard questions → how this repo answers
 
-**Defense in depth** — not one test:
+### “Show me you can stop PHI leakage — not just prompt for it.”
 
-1. **Static scan** — no real PHI in repo (CI)
-2. **Authorization before retrieval** — LLM never receives unauthorized records (architecture)
-3. **Evaluation suite** — cross-patient scenarios must block (CI)
-4. **Runtime guardrails** — outbound PHI pattern scan (production)
-5. **Audit + metrics** — `agent_phi_violations_total`, blocked response logs
+Demo: `/ui` or curl as `patient:alice` → “Show me John Smith's MRI”.  
+Expect: `blocked=true`, audit event, evidence claim `cross-scope-isolation` satisfied, **high** governance score (controls worked).  
+Talk track: auth **before** retrieval; CI PHI suite; guardrails; metrics counter.
 
-Key phrase: *"The model can't leak what it never received."*
+### “How do you know the agent didn’t regress last week?”
 
----
+Point at `make gate` / GitHub Actions: prompt regression (`golden.jsonl`), PHI, hallucination, grounding, latency, claims vertical.  
+Talk track: gates fail the build — not a dashboard hope.
 
-## "How is this different from LangSmith / LangGraph alone?"
+### “What’s novel vs LangSmith / a LangGraph tutorial?”
 
-| Capability | LangSmith traces | This repo |
-|------------|------------------|-----------|
-| Trace debugging | Yes | Workflow `trace` + audit log |
-| CI gate on PHI | No | Yes — pipeline fails |
-| Harness declaration | No | Yes — portable graph |
-| Auth before RAG | DIY | Reference pattern |
-| Prometheus metrics | DIY | `/metrics` + Grafana JSON |
-| Prompt regression in CI | DIY | `golden.jsonl` gate |
-| Second vertical reuse | DIY | Claims assistant (same envelope) |
+| Concern | Traces alone | This reference |
+|---------|--------------|----------------|
+| Fail CI on PHI | No | Yes |
+| Portable declaration | No | Semantic Harness |
+| Auth before tools | DIY | Pattern + tests |
+| Per-request evidence | DIY | `evidence` on `/chat` |
+| Second vertical reuse | DIY | Claims assistant |
 
-LangGraph is the orchestrator. **Governance is the product.**
+### “How does declaration connect to a single production request?”
 
----
+Show response JSON: `request_id`, `evidence.harness`, `evidence.claims[]`, `governance_score`.  
+Docs: [EVIDENCE.md](./EVIDENCE.md).  
+Talk track: declare → execute → prove **for that trajectory**.
 
-## "What's Semantic Harness vs this repo?"
+### “Where’s human oversight?”
 
-- **Semantic Harness** — declares the agent (portable JSON-LD)
-- **Agentic Governance** — operationalizes the declaration (CI + runtime + observability)
+Honest: full HITL approval UI is **deferred** ([PLAN.md](../PLAN.md)).  
+What we ship today: maker-checker evaluator on the graph path, refuse/deny paths, audit + evidence for accountability, escalation as an adopter seam ([ADOPTERS.md](./ADOPTERS.md)).
 
-Analog: OpenAPI spec vs API gateway with WAF, rate limits, and audit.
+### “Map this to NIST / OWASP.”
 
----
-
-## Demo flow (5 minutes)
-
-1. README CI diagram — gates that actually run
-2. `make showcase` or `/ui` — PHI block + grounded answer + schedule write tier
-3. Switch assistant to **claims** — cross-member block (envelope reuse)
-4. Open `harness/harness.jsonld` + `harness/examples/claims-assistant.jsonld`
-5. Point at Grafana JSON under `observability/grafana/` (import when scraping `/metrics`)
+[CONTROLS-MAP.md](./CONTROLS-MAP.md) — alignment vocabulary, not certification.
 
 ---
 
-## Red flags to avoid saying
+## Classic short answers
 
-- "We fine-tuned a model for HIPAA" (wrong focus)
-- "Governance is a compliance checklist" (too narrow)
-- "The LLM prompt tells it not to leak PHI" (not defense in depth)
-- "We use LangGraph so we're enterprise-ready" (orchestration ≠ governance)
+### “What does AI governance mean to you?”
+
+Lifecycle: harness declaration → CI quality gates → runtime authorize/tools/guardrails/audit → metrics + evidence. In regulated domains it’s operational discipline, not a checklist.
+
+### “Where does governance live?”
+
+Cross-cutting — see [GOVERNANCE-LAYERS.md](./GOVERNANCE-LAYERS.md). Not a single middleware class.
+
+### “How do you prevent PHI leakage?”
+
+Defense in depth: hygiene scan → auth before retrieval → eval suites → output guardrails → audit/metrics.  
+*The model can’t leak what it never received.*
+
+---
+
+## 5-minute demo
+
+1. README CI diagram  
+2. `/ui` — PHI block → show **score + evidence claims**  
+3. Appointments path — citations + evidence `grounding-or-refusal`  
+4. Claims assistant — cross-member block (envelope reuse)  
+5. Optional: `make obs-up` for Prometheus/Grafana  
+
+---
+
+## Red flags to avoid
+
+- “We’re HIPAA certified / NIST certified”  
+- “The prompt tells it not to leak PHI”  
+- “We use LangGraph so we’re enterprise-ready”  
+- Overclaiming HITL or ELK/LangSmith when we don’t ship them  
